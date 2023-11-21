@@ -15,6 +15,36 @@
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit
+from qiskit.converters import dag_to_circuit, circuit_to_dag
+from qiskit import QuantumCircuit
+import pyzx as zx
+
+
+def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
+    """Convert a DAG to a pyzx Circuit.
+
+    :param dag: The DAG to convert.
+    :return: The pyzx Circuit corresponding to the DAG.
+    """
+
+    # For now, convert it through QASM.
+    # TODO: read the DAG's op nodes directly.
+    qasm = dag_to_circuit(dag).qasm()
+    circ = zx.Circuit.from_qasm(qasm)
+    return circ
+
+
+def _circuit_to_dag(circ: zx.Circuit) -> DAGCircuit:
+    """Convert a pyzx Circuit to a DAG.
+
+    :param circ: The pyzx Circuit to convert.
+    :return: The DAG corresponding to the pyzx Circuit.
+    """
+
+    # TODO: skip the QASM intermediary step.
+    qc = QuantumCircuit.from_qasm_str(circ.to_qasm())
+    dag = circuit_to_dag(qc)
+    return dag
 
 
 class ZXPass(TransformationPass):
@@ -31,9 +61,12 @@ class ZXPass(TransformationPass):
         :param dag: The directed acyclic graph to optimize using pyzx.
         :return: The transformed DAG.
         """
-        print(dag)
 
-        return dag
+        zx_circ = _dag_to_circuit(dag)
+        g = zx_circ.to_graph()
+        zx.simplify.full_reduce(g)
+        out_dag = _circuit_to_dag(zx.extract.extract_circuit(g))
+        return out_dag
 
     def name(self) -> str:
         return "ZXPass"
