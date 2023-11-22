@@ -31,6 +31,7 @@ def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
     # TODO: read the DAG's op nodes directly.
     qasm = dag_to_circuit(dag).qasm()
     circ = zx.Circuit.from_qasm(qasm)
+    print("Original T-count: ", zx.tcount(circ))
     return circ
 
 
@@ -42,7 +43,13 @@ def _circuit_to_dag(circ: zx.Circuit) -> DAGCircuit:
     """
 
     # TODO: skip the QASM intermediary step.
-    qc = QuantumCircuit.from_qasm_str(circ.to_qasm())
+    print("Optimized T-count: ", zx.tcount(circ))
+    # print the list of gates in circ
+    for gate in circ.gates:
+        print(gate)
+    qasm = circ.to_qasm()
+    print(qasm)
+    qc = QuantumCircuit.from_qasm_str(qasm)
     dag = circuit_to_dag(qc)
     return dag
 
@@ -64,7 +71,15 @@ class ZXPass(TransformationPass):
 
         zx_circ = _dag_to_circuit(dag)
         g = zx_circ.to_graph()
+
+        print("Before:")
+        zx.draw(g)
+
         zx.simplify.full_reduce(g)
+
+        print("After:")
+        zx.draw(g)
+
         out_dag = _circuit_to_dag(zx.extract.extract_circuit(g))
         return out_dag
 
