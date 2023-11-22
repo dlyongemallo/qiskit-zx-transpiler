@@ -72,13 +72,13 @@ class ZXPass(TransformationPass):
         zx_circ = _dag_to_circuit(dag)
         g = zx_circ.to_graph()
 
-        print("Before:")
-        zx.draw(g)
+        # print("Before:")
+        # zx.draw(g)
 
         zx.simplify.full_reduce(g)
 
-        print("After:")
-        zx.draw(g)
+        # print("After:")
+        # zx.draw(g)
 
         out_dag = _circuit_to_dag(zx.extract.extract_circuit(g))
         return out_dag
