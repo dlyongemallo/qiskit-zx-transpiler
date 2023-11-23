@@ -25,9 +25,9 @@ from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
 import numpy as np
-from typing import Type
+from typing import Dict, List, Tuple, Type
 
-qiskit_gate_table: dict[str, tuple[Type[Gate], int, int, bool]] = {
+qiskit_gate_table: Dict[str, Tuple[Type[Gate], int, int, bool]] = {
     'x': (NOT, 1, 0, False),
     'y': (Y, 1, 0, False),
     'z': (Z, 1, 0, False),
@@ -79,7 +79,7 @@ def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
     :return: The pyzx Circuit corresponding to the DAG.
     """
 
-    gates: list[Gate] = []
+    gates: List[Gate] = []
     for node in dag.topological_op_nodes():
         gate = node.op
         if gate.name not in qiskit_gate_table:
