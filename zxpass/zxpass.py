@@ -15,9 +15,59 @@
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit
-from qiskit.converters import dag_to_circuit, circuit_to_dag
+from qiskit.converters import circuit_to_dag
 from qiskit import QuantumCircuit
 import pyzx as zx
+from pyzx.circuit.gates import Gate
+from pyzx.circuit.gates import NOT, Y, Z, S, T, HAD, SX
+from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
+from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
+from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ
+from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
+import numpy as np
+from typing import Dict, Type
+
+qiskit_gate_table: Dict[str, Type[Gate]] = {
+    'x': NOT,
+    'y': Y,
+    'z': Z,
+    'h': HAD,
+    's': S,
+    't': T,
+    'sx': SX,
+
+    'sdg': S,
+    'tdg': T,
+    'sxdg': SX,
+
+    'rx': XPhase,
+    'ry': YPhase,
+    'rz': ZPhase,
+    'p': ZPhase,
+    'u1': ZPhase,
+    'u2': U2,
+    'u3': U3,
+
+    'swap': SWAP,
+    'cx': CNOT,
+    'cy': CY,
+    'cz': CZ,
+    'ch': CHAD,
+    'csx': CSX,
+
+    'crx': CRX,
+    'cry': CRY,
+    'crz': CRZ,
+    'cp': CPhase,
+    'cphase': CPhase,
+    'cu1': CPhase,
+    'rxx': RXX,
+    'rzz': RZZ,
+
+    'cswap': CSWAP,
+    'ccx': Tofolli,
+    'ccz': CCZ,
+}
 
 
 def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
@@ -27,10 +77,57 @@ def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
     :return: The pyzx Circuit corresponding to the DAG.
     """
 
-    # For now, convert it through QASM.
-    # TODO: read the DAG's op nodes directly.
-    qasm = dag_to_circuit(dag).qasm()
-    circ = zx.Circuit.from_qasm(qasm)
+    gates: list[Gate] = []
+    for node in dag.topological_op_nodes():
+        gate = node.op
+        print(gate)
+        if gate.name in ('x', 'y', 'z', 'h', 's', 't', 'sx'):
+            assert len(node.qargs) == 1
+            assert len(node.op.params) == 0
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index))  # type: ignore
+        elif gate.name in ('sdg', 'tdg', 'sxdg'):
+            assert len(node.qargs) == 1
+            assert len(node.op.params) == 0
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index), adjoint=True)  # type: ignore
+        elif gate.name in ('rx', 'ry', 'rz', 'p', 'u1'):
+            assert len(node.qargs) == 1
+            assert len(node.op.params) == 1
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.op.params[0] / np.pi))  # type: ignore
+        elif gate.name == 'u2':
+            assert len(node.qargs) == 1
+            assert len(node.op.params) == 2
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.op.params[0] / np.pi, node.op.params[1] / np.pi))  # type: ignore
+        elif gate.name == 'u3':
+            assert len(node.qargs) == 1
+            assert len(node.op.params) == 3
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.op.params[0] / np.pi, node.op.params[1] / np.pi, node.op.params[2] / np.pi))  # type: ignore
+        elif gate.name in ('swap', 'cx', 'cy', 'cz', 'ch', 'csx'):
+            assert len(node.qargs) == 2
+            assert len(node.op.params) == 0
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.qargs[1].index))  # type: ignore
+        elif gate.name in ('crx', 'cry', 'crz', 'cp', 'cphase', 'cu1', 'rxx', 'rzz'):
+            assert len(node.qargs) == 2
+            assert len(node.op.params) == 1
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.qargs[1].index, node.op.params[0] / np.pi))  # type: ignore
+        elif gate.name in ('cswap', 'ccx', 'ccz'):
+            assert len(node.qargs) == 3
+            assert len(node.op.params) == 0
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.qargs[1].index, node.qargs[2].index))  # type: ignore
+        elif gate.name == 'cu3':
+            assert len(node.qargs) == 2
+            assert len(node.op.params) == 3
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.qargs[1].index, node.op.params[0] / np.pi, node.op.params[1] / np.pi, node.op.params[2] / np.pi))  # type: ignore
+        elif gate.name == 'cu':
+            assert len(node.qargs) == 2
+            assert len(node.op.params) == 4
+            gates.append(qiskit_gate_table[gate.name](node.qargs[0].index, node.qargs[1].index, node.op.params[0] / np.pi, node.op.params[1] / np.pi, node.op.params[2] / np.pi, node.op.params[3] / np.pi))  # type: ignore
+        else:
+            raise ValueError(f"Unsupported gate: {gate.name}.")
+    # TODO: Properly handle number of qubits. The following assumes there is only one quantum register.
+    num_qubits = len(dag.qubits)
+    circ = zx.Circuit(num_qubits)
+    circ.gates = gates
+
     return circ
 
 
@@ -70,4 +167,3 @@ class ZXPass(TransformationPass):
 
     def name(self) -> str:
         return "ZXPass"
-
