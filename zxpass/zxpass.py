@@ -25,7 +25,7 @@ from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
 import numpy as np
-from typing import Dict, List, Tuple, Type
+from typing import Dict, List, Tuple, Type, Callable
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], int, int, bool]] = {
     'x': (NOT, 1, 0),
@@ -112,10 +112,21 @@ def _circuit_to_dag(circ: zx.Circuit) -> DAGCircuit:
 
 class ZXPass(TransformationPass):
     """This is a ZX transpiler pass using pyzx for circuit optimization.
+
+    :param optimize: The function to use for optimizing the pyzx Circuit. If not specified, uses
+        :py:meth:`~pyzx.simplify.full_reduce` by default.
+    :type optimize: Callable[[pyzx.Circuit], pyzx.Circuit], optional
     """
 
-    def __init__(self):
+    def __init__(self, optimize: Callable[[zx.Circuit], zx.Circuit] = None):
         super().__init__()
+
+        self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or self._optimize
+
+    def _optimize(self, c: zx.Circuit) -> zx.Circuit:
+        g = c.to_graph()
+        zx.simplify.full_reduce(g)
+        return zx.extract.extract_circuit(g)
 
     def run(self, dag: DAGCircuit) -> DAGCircuit:
         """
@@ -125,11 +136,7 @@ class ZXPass(TransformationPass):
         :return: The transformed DAG.
         """
 
-        zx_circ = _dag_to_circuit(dag)
-        g = zx_circ.to_graph()
-        zx.simplify.full_reduce(g)
-        out_dag = _circuit_to_dag(zx.extract.extract_circuit(g))
-        return out_dag
+        return _circuit_to_dag(self.optimize(_dag_to_circuit(dag)))
 
     def name(self) -> str:
         return "ZXPass"

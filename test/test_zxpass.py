@@ -16,12 +16,14 @@
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
+from typing import Callable
 from zxpass import ZXPass
+import pyzx as zx
 import numpy as np
 
 
-def _run_zxpass(qc: QuantumCircuit) -> bool:
-    zxpass = ZXPass()
+def _run_zxpass(qc: QuantumCircuit, optimize: Callable[[zx.Circuit], zx.Circuit] = None) -> bool:
+    zxpass = ZXPass(optimize)
     pass_manager = PassManager(zxpass)
     zx_qc = pass_manager.run(qc)
 
@@ -51,6 +53,26 @@ def test_basic_circuit() -> None:
     qc.cx(0, 4)
 
     assert _run_zxpass(qc)
+
+
+def test_custom_optimize() -> None:
+    """Test custom optimize method.
+    """
+    qc = QuantumCircuit(4)
+    qc.h(0)
+    qc.h(1)
+    qc.h(2)
+    qc.h(3)
+    qc.cx(0, 1)
+    qc.cx(1, 2)
+    qc.cx(2, 3)
+    qc.cx(3, 0)
+
+    def optimize(circ: zx.Circuit) -> zx.Circuit:
+        # Any function that takes a zx.Circuit and returns a zx.Circuit will do.
+        return circ.to_basic_gates()
+
+    assert _run_zxpass(qc, optimize)
 
 
 def test_pyzx_issue_102() -> None:
