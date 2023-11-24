@@ -28,47 +28,47 @@ import numpy as np
 from typing import Dict, List, Tuple, Type
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], int, int, bool]] = {
-    'x': (NOT, 1, 0, False),
-    'y': (Y, 1, 0, False),
-    'z': (Z, 1, 0, False),
-    'h': (HAD, 1, 0, False),
-    's': (S, 1, 0, False),
-    't': (T, 1, 0, False),
-    'sx': (SX, 1, 0, False),
+    'x': (NOT, 1, 0),
+    'y': (Y, 1, 0),
+    'z': (Z, 1, 0),
+    'h': (HAD, 1, 0),
+    's': (S, 1, 0),
+    't': (T, 1, 0),
+    'sx': (SX, 1, 0),
 
     'sdg': (S, 1, 0, True),
     'tdg': (T, 1, 0, True),
     'sxdg': (SX, 1, 0, True),
 
-    'rx': (XPhase, 1, 1, False),
-    'ry': (YPhase, 1, 1, False),
-    'rz': (ZPhase, 1, 1, False),
-    'p': (ZPhase, 1, 1, False),
-    'u1': (ZPhase, 1, 1, False),
-    'u2': (U2, 1, 2, False),
-    'u3': (U3, 1, 3, False),
+    'rx': (XPhase, 1, 1),
+    'ry': (YPhase, 1, 1),
+    'rz': (ZPhase, 1, 1),
+    'p': (ZPhase, 1, 1),
+    'u1': (ZPhase, 1, 1),
+    'u2': (U2, 1, 2),
+    'u3': (U3, 1, 3),
 
-    'swap': (SWAP, 2, 0, False),
-    'cx': (CNOT, 2, 0, False),
-    'cy': (CY, 2, 0, False),
-    'cz': (CZ, 2, 0, False),
-    'ch': (CHAD, 2, 0, False),
-    'csx': (CSX, 2, 0, False),
+    'swap': (SWAP, 2, 0),
+    'cx': (CNOT, 2, 0),
+    'cy': (CY, 2, 0),
+    'cz': (CZ, 2, 0),
+    'ch': (CHAD, 2, 0),
+    'csx': (CSX, 2, 0),
 
-    'crx': (CRX, 2, 1, False),
-    'cry': (CRY, 2, 1, False),
-    'crz': (CRZ, 2, 1, False),
-    'cp': (CPhase, 2, 1, False),
-    'cphase': (CPhase, 2, 1, False),
-    'cu1': (CPhase, 2, 1, False),
-    'rxx': (RXX, 2, 1, False),
-    'rzz': (RZZ, 2, 1, False),
-    'cu3': (CU3, 2, 3, False),
-    'cu': (CU, 2, 4, False),
+    'crx': (CRX, 2, 1),
+    'cry': (CRY, 2, 1),
+    'crz': (CRZ, 2, 1),
+    'cp': (CPhase, 2, 1),
+    'cphase': (CPhase, 2, 1),
+    'cu1': (CPhase, 2, 1),
+    'rxx': (RXX, 2, 1),
+    'rzz': (RZZ, 2, 1),
+    'cu3': (CU3, 2, 3),
+    'cu': (CU, 2, 4),
 
-    'cswap': (CSWAP, 3, 0, False),
-    'ccx': (Tofolli, 3, 0, False),
-    'ccz': (CCZ, 3, 0, False),
+    'cswap': (CSWAP, 3, 0),
+    'ccx': (Tofolli, 3, 0),
+    'ccz': (CCZ, 3, 0),
 }
 
 
@@ -84,10 +84,10 @@ def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
         gate = node.op
         if gate.name not in qiskit_gate_table:
             raise ValueError(f"Unsupported gate: {gate.name}.")
-        gate_type, num_qubits, num_params, adjoint = qiskit_gate_table[gate.name]
+        gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]
         assert len(node.qargs) == num_qubits
         assert len(node.op.params) == num_params
-        kwargs = {'adjoint': adjoint} if adjoint else {}
+        kwargs = {'adjoint': adjoint[0]} if adjoint else {}
         gates.append(gate_type(*[qarg.index for qarg in node.qargs], *[param / np.pi for param in node.op.params], **kwargs))  # type: ignore
     # TODO: Properly handle number of qubits. The following assumes there is only one quantum register.
     num_qubits = len(dag.qubits)
