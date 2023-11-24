@@ -88,8 +88,7 @@ def _dag_to_circuit(dag: DAGCircuit) -> zx.Circuit:
         assert len(node.qargs) == num_qubits
         assert len(node.op.params) == num_params
         kwargs = {'adjoint': adjoint[0]} if adjoint else {}
-        gates.append(gate_type(*[qarg.index for qarg in node.qargs], *[param / np.pi for param in node.op.params], **kwargs))  # type: ignore
-    # TODO: Properly handle number of qubits. The following assumes there is only one quantum register.
+        gates.append(gate_type(*[dag.find_bit(qarg)[0] for qarg in node.qargs], *[param / np.pi for param in node.op.params], **kwargs))  # type: ignore
     num_qubits = len(dag.qubits)
     circ = zx.Circuit(num_qubits)
     circ.gates = gates
