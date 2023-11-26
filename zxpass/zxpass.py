@@ -122,8 +122,8 @@ class ZXPass(TransformationPass):
             kwargs = {'adjoint': adjoint[0]} if adjoint else {}
             gates.append(
                 gate_type(*[self.qubit_to_index[qarg] for qarg in node.qargs],  # type: ignore
-                          *[param / np.pi for param in node.op.params],  # type: ignore
-                          **kwargs))                                                    # type: ignore
+                          *[param / np.pi for param in node.op.params],         # type: ignore
+                          **kwargs))                                            # type: ignore
         num_qubits = len(dag.qubits)
         circ = zx.Circuit(num_qubits)
         circ.gates = gates
