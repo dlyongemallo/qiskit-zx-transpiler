@@ -36,7 +36,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Callable, Optional, Type
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
-    # OpenQASM gate name: (pyzx gate type, qiskit gate type, number of qubits, number of parameters, adjoint)
+    # OpenQASM gate name: (PyZX gate type, Qiskit gate type, number of qubits, number of parameters, adjoint)
 
     'x': (NOT, XGate, 1, 0),
     'y': (Y, YGate, 1, 0),
@@ -46,9 +46,9 @@ qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     't': (T, TGate, 1, 0),
     'sx': (SX, SXGate, 1, 0),
 
-    'sdg': (S, SdgGate, 1, 0, True),
-    'tdg': (T, TdgGate, 1, 0, True),
-    'sxdg': (SX, SXdgGate, 1, 0, True),
+    'sdg': (S, SdgGate, 1, 0, True),     # type: ignore
+    'tdg': (T, TdgGate, 1, 0, True),     # type: ignore
+    'sxdg': (SX, SXdgGate, 1, 0, True),  # type: ignore
 
     'rx': (XPhase, RXGate, 1, 1),
     'ry': (YPhase, RYGate, 1, 1),
@@ -116,7 +116,7 @@ class ZXPass(TransformationPass):
             gate = node.op
             if gate.name not in qiskit_gate_table:
                 raise ValueError(f"Unsupported gate: {gate.name}.")
-            gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]
+            gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
             assert len(node.qargs) == num_qubits
             assert len(node.op.params) == num_params
             kwargs = {'adjoint': adjoint[0]} if adjoint else {}
@@ -152,7 +152,7 @@ class ZXPass(TransformationPass):
                 params = [float(gate.phase) * np.pi]
             elif hasattr(gate, 'phases'):
                 params = [float(phase) * np.pi for phase in gate.phases]
-            _, gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate_name]
+            _, gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate_name]  # type: ignore
             dag.apply_operation_back(gate_type(*params), tuple(qargs))
 
         return dag
