@@ -114,6 +114,8 @@ class ZXPass(TransformationPass):
         self.qubit_to_index = {qubit: index for index, qubit in enumerate(dag.qubits)}
         for node in dag.topological_op_nodes():
             gate = node.op
+            if gate.condition:
+                raise ValueError(f"Conditional gates are not supported: {gate.condition}.")
             if gate.name not in qiskit_gate_table:
                 raise ValueError(f"Unsupported gate: {gate.name}.")
             gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
