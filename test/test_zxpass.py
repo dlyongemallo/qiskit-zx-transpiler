@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit import QuantumCircuit
+import pytest
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
 from typing import Callable
@@ -73,6 +74,19 @@ def test_custom_optimize() -> None:
         return circ.to_basic_gates()
 
     assert _run_zxpass(qc, optimize)
+
+
+def test_conditional_gate() -> None:
+    """Test a circuit with a conditional gate (which is not supported).
+    """
+    q = QuantumRegister(1, 'q')
+    c = ClassicalRegister(1, 'c')
+    qc = QuantumCircuit(q, c)
+    qc.h(q[0]).c_if(c, 0)
+
+    with pytest.raises(ValueError) as e:
+        _run_zxpass(qc)
+    assert str(e.value) == "Conditional gates are not supported: (ClassicalRegister(1, 'c'), 0)."
 
 
 def test_pyzx_issue_102() -> None:
