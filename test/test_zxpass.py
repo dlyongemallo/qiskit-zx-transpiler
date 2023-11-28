@@ -89,6 +89,22 @@ def test_conditional_gate() -> None:
     assert str(e.value) == "Conditional gates are not supported: (ClassicalRegister(1, 'c'), 0)."
 
 
+def test_measurement() -> None:
+    """Test a circuit with measurement.
+
+    From: https://qiskit.org/documentation/tutorials/circuits_advanced/04_transpiler_passes_and_passmanager.html
+    """
+    q = QuantumRegister(3, 'q')
+    c = ClassicalRegister(3, 'c')
+    qc = QuantumCircuit(q, c)
+    qc.h(q[0])
+    qc.cx(q[0], q[1])
+    qc.measure(q[0], c[0])
+    # qc.rz(0.5, q[1]).c_if(c, 2)
+
+    assert _run_zxpass(qc)
+
+
 def test_pyzx_issue_102() -> None:
     """Regression test for pyzx issue #102.
     """

@@ -15,7 +15,7 @@
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit
-from qiskit.circuit import Qubit, Instruction
+from qiskit.circuit import Qubit, Clbit, Instruction
 
 from qiskit.circuit.library import XGate, YGate, ZGate, HGate, SGate, TGate, SXGate
 from qiskit.circuit.library import SdgGate, TdgGate, SXdgGate
@@ -31,6 +31,7 @@ from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
 from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
+from pyzx.circuit.gates import Measurement
 
 import numpy as np
 from typing import Dict, List, Tuple, Callable, Optional, Type
@@ -94,7 +95,9 @@ class ZXPass(TransformationPass):
         super().__init__()
 
         self.qubits: List[Qubit] = []
+        self.clbits: List[Clbit] = []
         self.qubit_to_index: Dict[Qubit, int] = {}
+        self.clbit_to_index: Dict[Clbit, int] = {}
         self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or self._optimize
 
     def _optimize(self, c: zx.Circuit) -> zx.Circuit:
@@ -111,11 +114,18 @@ class ZXPass(TransformationPass):
 
         gates: List[Gate] = []
         self.qubits = dag.qubits
+        self.clbits = dag.clbits
         self.qubit_to_index = {qubit: index for index, qubit in enumerate(dag.qubits)}
+        self.clbit_to_index = {clbit: index for index, clbit in enumerate(dag.clbits)}
         for node in dag.topological_op_nodes():
             gate = node.op
             if gate.condition:
                 raise ValueError(f"Conditional gates are not supported: {gate.condition}.")
+            # if gate.name == 'measure':
+                # assert len(node.qargs) == 1
+                # assert len(node.cargs) == 1
+                # gates.append(Measurement(self.qubit_to_index[node.qargs[0]], self.clbit_to_index[node.cargs[0]]))
+                # continue
             if gate.name not in qiskit_gate_table:
                 raise ValueError(f"Unsupported gate: {gate.name}.")
             gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
@@ -127,7 +137,8 @@ class ZXPass(TransformationPass):
                           *[param / np.pi for param in node.op.params],         # type: ignore
                           **kwargs))                                            # type: ignore
         num_qubits = len(dag.qubits)
-        circ = zx.Circuit(num_qubits)
+        num_clbits = len(dag.clbits)
+        circ = zx.Circuit(qubit_amount=num_qubits, bit_amount=num_clbits)
         circ.gates = gates
 
         return circ
@@ -141,6 +152,7 @@ class ZXPass(TransformationPass):
 
         dag = DAGCircuit()
         dag.add_qubits(self.qubits)
+        dag.add_clbits(self.clbits)
         for gate in circ.gates:
             gate_name = gate.qasm_name if not (hasattr(gate, 'adjoint') and gate.adjoint) else gate.qasm_name_adjoint
             if gate_name not in qiskit_gate_table:
