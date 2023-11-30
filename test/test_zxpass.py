@@ -76,6 +76,19 @@ def test_custom_optimize() -> None:
     assert _run_zxpass(qc, optimize)
 
 
+def test_measurement() -> None:
+    """Test a circuit with a measurement (which is not supported).
+    """
+    q = QuantumRegister(1, 'q')
+    c = ClassicalRegister(1, 'c')
+    qc = QuantumCircuit(q, c)
+    qc.measure(q[0], c[0])
+
+    with pytest.raises(ValueError) as e:
+        _run_zxpass(qc)
+    assert str(e.value) == "Unsupported gate: measure."
+
+
 def test_conditional_gate() -> None:
     """Test a circuit with a conditional gate (which is not supported).
     """
