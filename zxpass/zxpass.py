@@ -31,7 +31,6 @@ from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
 from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
-from pyzx.circuit.gates import Measurement
 
 from collections import OrderedDict
 import numpy as np
@@ -99,9 +98,7 @@ class ZXPass(TransformationPass):
         self.clbits: List[Clbit] = []
         self.qregs: OrderedDict[str, Qubit] = OrderedDict()
         self.qubits: List[Qubit] = []
-        self.clbits: List[Clbit] = []
         self.qubit_to_index: Dict[Qubit, int] = {}
-        self.clbit_to_index: Dict[Clbit, int] = {}
         self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or self._optimize
 
     def _optimize(self, c: zx.Circuit) -> zx.Circuit:
@@ -122,7 +119,6 @@ class ZXPass(TransformationPass):
         self.clbits = dag.clbits
         self.qregs = dag.qregs
         self.qubits = dag.qubits
-        self.clbits = dag.clbits
         self.qubit_to_index = {qubit: index for index, qubit in enumerate(dag.qubits)}
 
         current_circuit: Optional[zx.Circuit] = None

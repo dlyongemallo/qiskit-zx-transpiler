@@ -116,7 +116,7 @@ def test_measurement() -> None:
     qc.h(q[0])
     qc.cx(q[0], q[1])
     qc.measure(q[0], c[0])
-    # qc.rz(0.5, q[1]).c_if(c, 2)
+    qc.rz(0.5, q[1]).c_if(c, 2)
 
     assert _run_zxpass(qc)
 
