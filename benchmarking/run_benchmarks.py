@@ -19,14 +19,17 @@ if __name__ == '__main__':
 
 from qiskit import QuantumCircuit, transpile
 from qiskit.transpiler import PassManager
+from typing import Dict, List, Tuple
+import matplotlib.pyplot as plt  # type: ignore
 
 from zxpass import ZXPass
+
 
 zxpass = ZXPass()
 pass_manager = PassManager(zxpass)
 
 
-def _benchmark(subdir: str, circuit_name: str) -> None:
+def _benchmark(subdir: str, circuit_name: str) -> Tuple[float, float, float]:
     qc = QuantumCircuit.from_qasm_file(f"QASMBench/{subdir}/{circuit_name}/{circuit_name}.qasm")
     opt_qc = transpile(qc, basis_gates=['u3', 'cx'], optimization_level=3)
     zx_qc = pass_manager.run(qc)
@@ -45,6 +48,24 @@ def _benchmark(subdir: str, circuit_name: str) -> None:
     else:
         print("optimized: 0, zx: 0")
     print()
+    return (qc.depth() / opt_qc.depth(),
+            qc.depth() / zx_qc.depth(),
+            qc.num_nonlocal_gates() / zx_qc.num_nonlocal_gates() if zx_qc.num_nonlocal_gates() != 0 else 0)
+
+
+def _save_plot(title: str, plot_index: List[str], data: Dict[str, List[float]], ylabel: str) -> None:
+    width = 0.35
+    fig, ax = plt.subplots()
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
+    x = range(len(plot_index))
+    ax.bar(x, data['qiskit'], width, label='qiskit')
+    ax.bar([i + width for i in x], data['pyzx'], width, label='pyzx')
+    ax.set_xticks([i + width / 2 for i in x])
+    ax.set_xticklabels(plot_index, rotation=90)
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(f"{title}.png")
 
 
 def run_benchmarks() -> None:
@@ -56,10 +77,26 @@ def run_benchmarks() -> None:
                         'qaoa_n6', 'bb84_n8', 'vqe_uccsd_n8', 'adder_n10', 'dnn_n8']
     medium_benchmarks = ['bv_n14', 'multiplier_n15', 'sat_n11', 'qft_n18']
 
+    depth_ratio: Dict[str, List[float]] = {'qiskit': [], 'pyzx': []}
+    num_nonlocal_ratio: Dict[str, List[float]] = {'qiskit': [], 'pyzx': []}
+    plot_index = []
     for benchmark in small_benchmarks:
-        _benchmark('small', benchmark)
+        qiskit_depth, zx_depth, non_local_ratio = _benchmark('small', benchmark)
+        depth_ratio['pyzx'].append(zx_depth)
+        depth_ratio['qiskit'].append(qiskit_depth)
+        num_nonlocal_ratio['pyzx'].append(non_local_ratio)
+        num_nonlocal_ratio['qiskit'].append(1 if non_local_ratio != 0 else 0)
+        plot_index.append(benchmark)
     for benchmark in medium_benchmarks:
-        _benchmark('medium', benchmark)
+        qiskit_depth, zx_depth, non_local_ratio = _benchmark('medium', benchmark)
+        depth_ratio['pyzx'].append(zx_depth)
+        depth_ratio['qiskit'].append(qiskit_depth)
+        num_nonlocal_ratio['pyzx'].append(non_local_ratio)
+        num_nonlocal_ratio['qiskit'].append(1 if non_local_ratio != 0 else 0)
+        plot_index.append(benchmark)
+
+    _save_plot('Depth compression ratio', plot_index, depth_ratio, 'depth_ratio')
+    _save_plot('Ratio of non-local gates', plot_index, num_nonlocal_ratio, 'num_nonlocal_ratio')
 
 
 if __name__ == '__main__':
