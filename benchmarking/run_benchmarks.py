@@ -30,11 +30,12 @@ pass_manager = PassManager(zxpass)
 
 
 def _benchmark(subdir: str, circuit_name: str) -> Tuple[float, float, float]:
+    print(f"Circuit name: {circuit_name}")
+
     qc = QuantumCircuit.from_qasm_file(f"QASMBench/{subdir}/{circuit_name}/{circuit_name}.qasm")
     opt_qc = transpile(qc, basis_gates=['u3', 'cx'], optimization_level=3)
     zx_qc = pass_manager.run(qc)
 
-    print(f"Circuit name: {circuit_name}")
     print(f"Size - original: {qc.size()}, "
           f"optimized: {opt_qc.size()} ({qc.size() / opt_qc.size():.2f}), "
           f"zx: {zx_qc.size()} ({qc.size() / zx_qc.size():.2f})")
@@ -48,6 +49,7 @@ def _benchmark(subdir: str, circuit_name: str) -> Tuple[float, float, float]:
     else:
         print("optimized: 0, zx: 0")
     print()
+
     return (qc.depth() / opt_qc.depth(),
             qc.depth() / zx_qc.depth(),
             qc.num_nonlocal_gates() / zx_qc.num_nonlocal_gates() if zx_qc.num_nonlocal_gates() != 0 else 0)
