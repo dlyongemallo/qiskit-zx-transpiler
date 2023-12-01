@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
+from qiskit.circuit.random import random_circuit
 import qiskit.converters
 from typing import Callable
 from zxpass import ZXPass
@@ -129,3 +129,13 @@ def test_pyzx_issue_102() -> None:
     qc.crx(0.02*np.pi, 2, 0)
 
     assert _run_zxpass(qc)
+
+
+def test_random_circuits() -> None:
+    """Test random circuits.
+    """
+    for _ in range(20):
+        num_qubits = np.random.randint(4, 9)
+        depth = np.random.randint(10, 21)
+        qc = random_circuit(num_qubits, depth)
+        assert _run_zxpass(qc)

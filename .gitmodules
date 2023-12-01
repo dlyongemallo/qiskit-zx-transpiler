@@ -1,0 +1,3 @@
+[submodule "benchmarking/QASMBench"]
+	path = benchmarking/QASMBench
+	url = https://github.com/pnnl/QASMBench
