@@ -17,6 +17,7 @@ import pytest
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
+import qiskit.converters
 from typing import Callable
 from zxpass import ZXPass
 import pyzx as zx
@@ -76,17 +77,32 @@ def test_custom_optimize() -> None:
     assert _run_zxpass(qc, optimize)
 
 
+def test_measurement() -> None:
+    """Test a circuit with a measurement.
+    """
+    q = QuantumRegister(1, 'q')
+    c = ClassicalRegister(1, 'c')
+    qc = QuantumCircuit(q, c)
+    qc.h(q[0])
+    qc.measure(q[0], c[0])
+    qc.h(q[0])
+
+    dag = qiskit.converters.circuit_to_dag(qc)
+    zxpass = ZXPass()
+    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(dag)
+    assert len(circuits_and_nodes) == 3
+    assert circuits_and_nodes[1] == dag.op_nodes()[1]
+
+
 def test_conditional_gate() -> None:
-    """Test a circuit with a conditional gate (which is not supported).
+    """Test a circuit with a conditional gate.
     """
     q = QuantumRegister(1, 'q')
     c = ClassicalRegister(1, 'c')
     qc = QuantumCircuit(q, c)
     qc.h(q[0]).c_if(c, 0)
 
-    with pytest.raises(ValueError) as e:
-        _run_zxpass(qc)
-    assert str(e.value) == "Conditional gates are not supported: (ClassicalRegister(1, 'c'), 0)."
+    assert _run_zxpass(qc)
 
 
 def test_measurement() -> None:
@@ -106,7 +122,10 @@ def test_measurement() -> None:
 
 
 def test_pyzx_issue_102() -> None:
-    """Regression test for pyzx issue #102.
+    """Regression test for PyZX issue #102.
+
+    This tests for a bug which prevented an earlier attempt at a Qiskit ZX transpiler pass from working.
+    See: https://github.com/Quantomatic/pyzx/issues/102
     """
     qc = QuantumCircuit(4)
     qc.ccx(2, 1, 0)

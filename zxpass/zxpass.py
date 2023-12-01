@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from qiskit.transpiler.basepasses import TransformationPass
-from qiskit.dagcircuit import DAGCircuit
+from qiskit.dagcircuit import DAGCircuit, DAGOpNode
 from qiskit.circuit import Qubit, Clbit, Instruction
 
 from qiskit.circuit.library import XGate, YGate, ZGate, HGate, SGate, TGate, SXGate
@@ -33,8 +33,9 @@ from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
 from pyzx.circuit.gates import Measurement
 
+from collections import OrderedDict
 import numpy as np
-from typing import Dict, List, Tuple, Callable, Optional, Type
+from typing import Dict, List, Tuple, Callable, Optional, Type, Union
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     # OpenQASM gate name: (PyZX gate type, Qiskit gate type, number of qubits, number of parameters, adjoint)
@@ -84,9 +85,9 @@ qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
 
 
 class ZXPass(TransformationPass):
-    """This is a ZX transpiler pass using pyzx for circuit optimization.
+    """This is a ZX transpiler pass using PyZX for circuit optimization.
 
-    :param optimize: The function to use for optimizing the pyzx Circuit. If not specified, uses
+    :param optimize: The function to use for optimizing a PyZX Circuit. If not specified, uses
         :py:meth:`~pyzx.simplify.full_reduce` by default.
     :type optimize: Callable[[pyzx.Circuit], pyzx.Circuit], optional
     """
@@ -94,6 +95,9 @@ class ZXPass(TransformationPass):
     def __init__(self, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None):
         super().__init__()
 
+        self.cregs: OrderedDict[str, Clbit] = OrderedDict()
+        self.clbits: List[Clbit] = []
+        self.qregs: OrderedDict[str, Qubit] = OrderedDict()
         self.qubits: List[Qubit] = []
         self.clbits: List[Clbit] = []
         self.qubit_to_index: Dict[Qubit, int] = {}
@@ -105,69 +109,88 @@ class ZXPass(TransformationPass):
         zx.simplify.full_reduce(g)
         return zx.extract.extract_circuit(g)
 
-    def _dag_to_circuit(self, dag: DAGCircuit) -> zx.Circuit:
-        """Convert a DAG to a pyzx Circuit.
+    def _dag_to_circuits_and_nodes(self, dag: DAGCircuit) -> List[Union[zx.Circuit, DAGOpNode]]:
+        """Convert a DAG to a list of PyZX Circuits and DAGOpNodes. As much of the DAG is converted to PyZX Circuits as
+        possible, but some gates are not supported by PyZX and are left as DAGOpNodes.
 
         :param dag: The DAG to convert.
-        :return: The pyzx Circuit corresponding to the DAG.
+        :return: A list of PyZX Circuits and DAGOpNodes corresponding to the DAG.
         """
 
-        gates: List[Gate] = []
+        circuits_and_nodes: List[Union[zx.Circuit, DAGOpNode]] = []
+        self.cregs = dag.cregs
+        self.clbits = dag.clbits
+        self.qregs = dag.qregs
         self.qubits = dag.qubits
         self.clbits = dag.clbits
         self.qubit_to_index = {qubit: index for index, qubit in enumerate(dag.qubits)}
-        self.clbit_to_index = {clbit: index for index, clbit in enumerate(dag.clbits)}
+
+        current_circuit: Optional[zx.Circuit] = None
         for node in dag.topological_op_nodes():
             gate = node.op
-            if gate.condition:
-                raise ValueError(f"Conditional gates are not supported: {gate.condition}.")
-            # if gate.name == 'measure':
-                # assert len(node.qargs) == 1
-                # assert len(node.cargs) == 1
-                # gates.append(Measurement(self.qubit_to_index[node.qargs[0]], self.clbit_to_index[node.cargs[0]]))
-                # continue
-            if gate.name not in qiskit_gate_table:
-                raise ValueError(f"Unsupported gate: {gate.name}.")
+            # TODO: It might be possible to do something more clever here by "snipping out" the unsupported operations,
+            #       optimizing the rest of the circuit, and then reinserting the unsupported operations, but this is
+            #       very tricky as the unsupported operations may have side effects on the rest of the circuit.
+            if gate.name not in qiskit_gate_table or gate.condition is not None:
+                # Encountered an operation not supported by PyZX, so just store the DAGOpNode.
+                # Flush the current PyZX Circuit first if there is one.
+                if current_circuit is not None:
+                    circuits_and_nodes.append(current_circuit)
+                    current_circuit = None
+                circuits_and_nodes.append(node)
+                continue
             gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
-            assert len(node.qargs) == num_qubits
-            assert len(node.op.params) == num_params
+            if len(node.qargs) != num_qubits:
+                raise ValueError(f"Expected {num_qubits} qubits for gate {gate.name}, got {len(node.qargs)}: "
+                                 f"{node.qargs}.")
+            if len(node.op.params) != num_params:
+                raise ValueError(f"Expected {num_params} parameters for gate {gate.name}, got {len(node.op.params)}: "
+                                 f"{node.op.params}.")
             kwargs = {'adjoint': adjoint[0]} if adjoint else {}
-            gates.append(
-                gate_type(*[self.qubit_to_index[qarg] for qarg in node.qargs],  # type: ignore
-                          *[param / np.pi for param in node.op.params],         # type: ignore
-                          **kwargs))                                            # type: ignore
-        num_qubits = len(dag.qubits)
-        num_clbits = len(dag.clbits)
-        circ = zx.Circuit(qubit_amount=num_qubits, bit_amount=num_clbits)
-        circ.gates = gates
+            if current_circuit is None:
+                current_circuit = zx.Circuit(len(dag.qubits))
+            current_circuit.add_gate(gate_type(*[self.qubit_to_index[qarg] for qarg in node.qargs],  # type: ignore
+                                               *[param / np.pi for param in node.op.params],         # type: ignore
+                                               **kwargs))                                            # type: ignore
 
-        return circ
+        # Flush any remaining PyZX Circuit.
+        if current_circuit is not None:
+            circuits_and_nodes.append(current_circuit)
 
-    def _circuit_to_dag(self, circ: zx.Circuit) -> DAGCircuit:
-        """Convert a pyzx Circuit to a DAG.
+        return circuits_and_nodes
 
-        :param circ: The pyzx Circuit to convert.
-        :return: The DAG corresponding to the pyzx Circuit.
+    def _recover_dag(self, circuits_and_nodes: List[Union[zx.Circuit, DAGOpNode]]) -> DAGCircuit:
+        """Recovers a DAG from a list of a pyzx Circuits and DAGOpNodes
+
+        :param circuits_and_nodes: The list of (optimized) PyZX Circuits and DAGOpNodes from which to recover the DAG.
+        :return: An optimized version of the original input DAG to ZXPass.
         """
 
         dag = DAGCircuit()
-        dag.add_qubits(self.qubits)
+        dag.cregs = self.cregs
         dag.add_clbits(self.clbits)
-        for gate in circ.gates:
-            gate_name = gate.qasm_name if not (hasattr(gate, 'adjoint') and gate.adjoint) else gate.qasm_name_adjoint
-            if gate_name not in qiskit_gate_table:
-                raise ValueError(f"Unsupported gate: {gate_name}.")
-            qargs: List[Qubit] = []
-            for attr in ['ctrl1', 'ctrl2', 'control', 'target']:
-                if hasattr(gate, attr):
-                    qargs.append(self.qubits[getattr(gate, attr)])
-            params: List[float] = []
-            if hasattr(gate, 'phase'):
-                params = [float(gate.phase) * np.pi]
-            elif hasattr(gate, 'phases'):
-                params = [float(phase) * np.pi for phase in gate.phases]
-            _, gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate_name]  # type: ignore
-            dag.apply_operation_back(gate_type(*params), tuple(qargs))
+        dag.qregs = self.qregs
+        dag.add_qubits(self.qubits)
+        for circuit in circuits_and_nodes:
+            if isinstance(circuit, DAGOpNode):
+                dag.apply_operation_back(circuit.op, circuit.qargs, circuit.cargs)
+                continue
+            for gate in circuit.gates:
+                gate_name = gate.qasm_name if not (hasattr(gate, 'adjoint') and gate.adjoint) \
+                    else gate.qasm_name_adjoint
+                if gate_name not in qiskit_gate_table:
+                    raise ValueError(f"Unsupported gate: {gate_name}.")
+                qargs: List[Qubit] = []
+                for attr in ['ctrl1', 'ctrl2', 'control', 'target']:
+                    if hasattr(gate, attr):
+                        qargs.append(self.qubits[getattr(gate, attr)])
+                params: List[float] = []
+                if hasattr(gate, 'phase'):
+                    params = [float(gate.phase) * np.pi]
+                elif hasattr(gate, 'phases'):
+                    params = [float(phase) * np.pi for phase in gate.phases]
+                _, gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate_name]  # type: ignore
+                dag.apply_operation_back(gate_type(*params), tuple(qargs))
 
         return dag
 
@@ -179,7 +202,14 @@ class ZXPass(TransformationPass):
         :return: The transformed DAG.
         """
 
-        return self._circuit_to_dag(self.optimize(self._dag_to_circuit(dag)))
+        circuits_and_nodes = self._dag_to_circuits_and_nodes(dag)
+        if not circuits_and_nodes:
+            return dag
+
+        circuits_and_nodes = [self.optimize(circuit) if isinstance(circuit, zx.Circuit) else circuit
+                              for circuit in circuits_and_nodes]
+
+        return self._recover_dag(circuits_and_nodes)
 
     def name(self) -> str:
         return "ZXPass"
