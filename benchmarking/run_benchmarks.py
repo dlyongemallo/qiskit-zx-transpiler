@@ -38,6 +38,12 @@ def _benchmark(subdir: str, circuit_name: str) -> None:
     print(f"Depth - original: {qc.depth()}, "
           f"optimized: {opt_qc.depth()} ({qc.depth() / opt_qc.depth():.2f}), "
           f"zx: {zx_qc.depth()} ({qc.depth() / zx_qc.depth():.2f})")
+    print(f"Number of non-local gates - original: {qc.num_nonlocal_gates()}, ", end="")
+    if qc.num_nonlocal_gates() != 0:
+        print(f"optimized: {opt_qc.num_nonlocal_gates()}, zx: {zx_qc.num_nonlocal_gates()}, "
+              f"ratio: {opt_qc.num_nonlocal_gates() / zx_qc.num_nonlocal_gates():.2f}")
+    else:
+        print("optimized: 0, zx: 0")
     print()
 
 
