@@ -105,6 +105,19 @@ def test_conditional_gate() -> None:
     assert _run_zxpass(qc)
 
 
+def test_unitary() -> None:
+    """Test a circuit with a unitary gate.
+    """
+    matrix = [[0, 0, 0, 1],
+              [0, 0, 1, 0],
+              [1, 0, 0, 0],
+              [0, 1, 0, 0]]
+    qc = QuantumCircuit(2)
+    qc.unitary(matrix, [0, 1])
+
+    assert _run_zxpass(qc)
+
+
 def test_pyzx_issue_102() -> None:
     """Regression test for PyZX issue #102.
 
