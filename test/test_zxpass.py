@@ -18,13 +18,13 @@ from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
 from qiskit.circuit.random import random_circuit
 import qiskit.converters
-from typing import Callable
+from typing import Callable, Optional
 from zxpass import ZXPass
 import pyzx as zx
 import numpy as np
 
 
-def _run_zxpass(qc: QuantumCircuit, optimize: Callable[[zx.Circuit], zx.Circuit] = None) -> bool:
+def _run_zxpass(qc: QuantumCircuit, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None) -> bool:
     zxpass = ZXPass(optimize)
     pass_manager = PassManager(zxpass)
     zx_qc = pass_manager.run(qc)
