@@ -121,7 +121,9 @@ def test_unitary() -> None:
 # def test_measurement() -> None:
 #     """Test a circuit with measurement.
 # 
-#     From: https://qiskit.org/documentation/tutorials/circuits_advanced/04_transpiler_passes_and_passmanager.html
+#     From (obsolete): https://qiskit.org/documentation/tutorials/circuits_advanced/04_transpiler_passes_and_passmanager.html
+#            (cached): https://github.com/Qiskit/qiskit-tutorials/blob/master/tutorials/circuits_advanced/04_transpiler_passes_and_passmanager.ipynb
+#       (replacement): https://docs.quantum.ibm.com/transpile/custom-transpiler-pass
 #     """
 #     q = QuantumRegister(3, 'q')
 #     c = ClassicalRegister(3, 'c')
