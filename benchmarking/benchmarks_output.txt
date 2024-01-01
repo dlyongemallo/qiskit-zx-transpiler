@@ -1,0 +1,180 @@
+Circuit name: wstate_n3
+Size - original: 9, optimized: 22 (0.41), zx: 48 (0.19)
+Depth - original: 6, optimized: 14 (0.43), zx: 32 (0.19)
+Number of non-local gates - original: 3, optimized: 6, zx: 13, ratio: 0.46
+
+Circuit name: linearsolver_n3
+Size - original: 22, optimized: 16 (1.38), zx: 24 (0.92)
+Depth - original: 12, optimized: 10 (1.20), zx: 16 (0.75)
+Number of non-local gates - original: 4, optimized: 4, zx: 6, ratio: 0.67
+
+Circuit name: fredkin_n3
+Size - original: 22, optimized: 21 (1.05), zx: 40 (0.55)
+Depth - original: 12, optimized: 12 (1.00), zx: 27 (0.44)
+Number of non-local gates - original: 8, optimized: 8, zx: 10, ratio: 0.80
+
+Circuit name: dnn_n2
+Size - original: 228, optimized: 13 (17.54), zx: 174 (1.31)
+Depth - original: 155, optimized: 8 (19.38), zx: 136 (1.14)
+Number of non-local gates - original: 42, optimized: 3, zx: 30, ratio: 0.10
+
+Circuit name: qrng_n4
+Size - original: 8, optimized: 8 (1.00), zx: 8 (1.00)
+Depth - original: 2, optimized: 2 (1.00), zx: 2 (1.00)
+Number of non-local gates - original: 0, optimized: 0, zx: 0
+
+Circuit name: adder_n4
+Size - original: 27, optimized: 25 (1.08), zx: 52 (0.52)
+Depth - original: 12, optimized: 12 (1.00), zx: 33 (0.36)
+Number of non-local gates - original: 10, optimized: 10, zx: 17, ratio: 0.59
+
+Circuit name: deutsch_n2
+Size - original: 7, optimized: 6 (1.17), zx: 9 (0.78)
+Depth - original: 5, optimized: 4 (1.25), zx: 6 (0.83)
+Number of non-local gates - original: 1, optimized: 1, zx: 1, ratio: 1.00
+
+Circuit name: cat_state_n4
+Size - original: 8, optimized: 8 (1.00), zx: 14 (0.57)
+Depth - original: 5, optimized: 5 (1.00), zx: 8 (0.62)
+Number of non-local gates - original: 3, optimized: 3, zx: 3, ratio: 1.00
+
+Circuit name: basis_trotter_n4
+Size - original: 1510, optimized: 653 (2.31), zx: 567 (2.66)
+Depth - original: 815, optimized: 284 (2.87), zx: 413 (1.97)
+Number of non-local gates - original: 462, optimized: 215, zx: 175, ratio: 1.23
+
+Circuit name: qec_en_n5
+Size - original: 30, optimized: 27 (1.11), zx: 30 (1.00)
+Depth - original: 18, optimized: 15 (1.20), zx: 15 (1.20)
+Number of non-local gates - original: 10, optimized: 10, zx: 12, ratio: 0.83
+
+Circuit name: toffoli_n3
+Size - original: 21, optimized: 18 (1.17), zx: 34 (0.62)
+Depth - original: 13, optimized: 12 (1.08), zx: 23 (0.57)
+Number of non-local gates - original: 6, optimized: 6, zx: 8, ratio: 0.75
+
+Circuit name: grover_n2
+Size - original: 18, optimized: 10 (1.80), zx: 12 (1.50)
+Depth - original: 12, optimized: 6 (2.00), zx: 7 (1.71)
+Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
+
+Circuit name: hs4_n4
+Size - original: 32, optimized: 20 (1.60), zx: 18 (1.78)
+Depth - original: 10, optimized: 6 (1.67), zx: 7 (1.43)
+Number of non-local gates - original: 4, optimized: 4, zx: 4, ratio: 1.00
+
+Circuit name: qaoa_n3
+Size - original: 18, optimized: 17 (1.06), zx: 26 (0.69)
+Depth - original: 12, optimized: 11 (1.09), zx: 15 (0.80)
+Number of non-local gates - original: 6, optimized: 6, zx: 6, ratio: 1.00
+
+Circuit name: teleportation_n3
+Size - original: 11, optimized: 8 (1.38), zx: 13 (0.85)
+Depth - original: 7, optimized: 5 (1.40), zx: 7 (1.00)
+Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
+
+Circuit name: lpn_n5
+Size - original: 16, optimized: 14 (1.14), zx: 12 (1.33)
+Depth - original: 5, optimized: 5 (1.00), zx: 5 (1.00)
+Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
+
+Circuit name: vqe_uccsd_n4
+Size - original: 220, optimized: 150 (1.47), zx: 90 (2.44)
+Depth - original: 145, optimized: 110 (1.32), zx: 70 (2.07)
+Number of non-local gates - original: 88, optimized: 71, zx: 42, ratio: 1.69
+
+Circuit name: quantumwalks_n2
+Size - original: 13, optimized: 13 (1.00), zx: 43 (0.30)
+Depth - original: 8, optimized: 8 (1.00), zx: 31 (0.26)
+Number of non-local gates - original: 3, optimized: 3, zx: 7, ratio: 0.43
+
+Circuit name: variational_n4
+Size - original: 58, optimized: 32 (1.81), zx: 68 (0.85)
+Depth - original: 34, optimized: 14 (2.43), zx: 46 (0.74)
+Number of non-local gates - original: 16, optimized: 8, zx: 24, ratio: 0.33
+
+Circuit name: qft_n4
+Size - original: 16, optimized: 40 (0.40), zx: 66 (0.24)
+Depth - original: 9, optimized: 23 (0.39), zx: 44 (0.20)
+Number of non-local gates - original: 6, optimized: 12, zx: 22, ratio: 0.55
+
+Circuit name: iswap_n2
+Size - original: 11, optimized: 9 (1.22), zx: 12 (0.92)
+Depth - original: 8, optimized: 6 (1.33), zx: 10 (0.80)
+Number of non-local gates - original: 2, optimized: 2, zx: 3, ratio: 0.67
+
+Circuit name: bell_n4
+Size - original: 37, optimized: 22 (1.68), zx: 29 (1.28)
+Depth - original: 14, optimized: 8 (1.75), zx: 15 (0.93)
+Number of non-local gates - original: 7, optimized: 5, zx: 8, ratio: 0.62
+
+Circuit name: basis_change_n3
+Size - original: 36, optimized: 36 (1.00), zx: 81 (0.44)
+Depth - original: 22, optimized: 22 (1.00), zx: 71 (0.31)
+Number of non-local gates - original: 10, optimized: 10, zx: 24, ratio: 0.42
+
+Circuit name: vqe_uccsd_n6
+Size - original: 2282, optimized: 1670 (1.37), zx: 431 (5.29)
+Depth - original: 1486, optimized: 1297 (1.15), zx: 307 (4.84)
+Number of non-local gates - original: 1052, optimized: 931, zx: 202, ratio: 4.61
+
+Circuit name: ising_n10
+Size - original: 490, optimized: 245 (2.00), zx: 442 (1.11)
+Depth - original: 71, optimized: 42 (1.69), zx: 107 (0.66)
+Number of non-local gates - original: 90, optimized: 90, zx: 142, ratio: 0.63
+
+Circuit name: simon_n6
+Size - original: 22, optimized: 46 (0.48), zx: 21 (1.05)
+Depth - original: 9, optimized: 28 (0.32), zx: 10 (0.90)
+Number of non-local gates - original: 4, optimized: 14, zx: 4, ratio: 3.50
+
+Circuit name: qpe_n9
+Size - original: 39, optimized: 123 (0.32), zx: 181 (0.22)
+Depth - original: 21, optimized: 85 (0.25), zx: 97 (0.22)
+Number of non-local gates - original: 18, optimized: 43, zx: 61, ratio: 0.70
+
+Circuit name: qaoa_n6
+Size - original: 276, optimized: 120 (2.30), zx: 166 (1.66)
+Depth - original: 110, optimized: 46 (2.39), zx: 93 (1.18)
+Number of non-local gates - original: 54, optimized: 36, zx: 74, ratio: 0.49
+
+Circuit name: bb84_n8
+Size - original: 43, optimized: 31 (1.39), zx: 41 (1.05)
+Depth - original: 7, optimized: 4 (1.75), zx: 8 (0.88)
+Number of non-local gates - original: 0, optimized: 0, zx: 0
+
+Circuit name: vqe_uccsd_n8
+Size - original: 10808, optimized: 8150 (1.33), zx: 1621 (6.67)
+Depth - original: 7252, optimized: 6423 (1.13), zx: 1117 (6.49)
+Number of non-local gates - original: 5488, optimized: 4815, zx: 766, ratio: 6.29
+
+Circuit name: adder_n10
+Size - original: 19, optimized: 139 (0.14), zx: 31 (0.61)
+Depth - original: 11, optimized: 96 (0.11), zx: 13 (0.85)
+Number of non-local gates - original: 9, optimized: 65, zx: 9, ratio: 7.22
+
+Circuit name: dnn_n8
+Size - original: 1016, optimized: 208 (4.88), zx: 755 (1.35)
+Depth - original: 173, optimized: 34 (5.09), zx: 202 (0.86)
+Number of non-local gates - original: 192, optimized: 64, zx: 139, ratio: 0.46
+
+Circuit name: bv_n14
+Size - original: 54, optimized: 53 (1.02), zx: 56 (0.96)
+Depth - original: 17, optimized: 16 (1.06), zx: 19 (0.89)
+Number of non-local gates - original: 13, optimized: 13, zx: 13, ratio: 1.00
+
+Circuit name: multiplier_n15
+Size - original: 73, optimized: 498 (0.15), zx: 467 (0.16)
+Depth - original: 49, optimized: 232 (0.21), zx: 276 (0.18)
+Number of non-local gates - original: 66, optimized: 222, zx: 235, ratio: 0.94
+
+Circuit name: sat_n11
+Size - original: 95, optimized: 604 (0.16), zx: 611 (0.16)
+Depth - original: 51, optimized: 388 (0.13), zx: 421 (0.12)
+Number of non-local gates - original: 42, optimized: 252, zx: 256, ratio: 0.98
+
+Circuit name: qft_n18
+Size - original: 801, optimized: 801 (1.00), zx: 995 (0.81)
+Depth - original: 134, optimized: 134 (1.00), zx: 516 (0.26)
+Number of non-local gates - original: 306, optimized: 306, zx: 432, ratio: 0.71
+
