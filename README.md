@@ -42,7 +42,7 @@ cd benchmarking
 python run_benchmarks.py
 ```
 
-This will output some statistics and produce 2 PNG files showing the depth compression ratio and ratio of non-local gates between the optimized and original circuits.
+This will output some statistics and produce 2 PNG files showing the depth compression ratio between both Qiskit- and ZX-optimized circuits and the original circuits, and ratio of non-local gates beween the Qiskit- and ZX-optimized circuits.
 
 ## Previous work
 
