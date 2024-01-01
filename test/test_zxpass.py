@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
+from qiskit.circuit.random import random_circuit
 import qiskit.converters
-from typing import Callable
+from typing import Callable, Optional
 from zxpass import ZXPass
 import pyzx as zx
 import numpy as np
 
 
-def _run_zxpass(qc: QuantumCircuit, optimize: Callable[[zx.Circuit], zx.Circuit] = None) -> bool:
+def _run_zxpass(qc: QuantumCircuit, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None) -> bool:
     zxpass = ZXPass(optimize)
     pass_manager = PassManager(zxpass)
     zx_qc = pass_manager.run(qc)
@@ -105,6 +105,19 @@ def test_conditional_gate() -> None:
     assert _run_zxpass(qc)
 
 
+def test_unitary() -> None:
+    """Test a circuit with a unitary gate.
+    """
+    matrix = [[0, 0, 0, 1],
+              [0, 0, 1, 0],
+              [1, 0, 0, 0],
+              [0, 1, 0, 0]]
+    qc = QuantumCircuit(2)
+    qc.unitary(matrix, [0, 1])
+
+    assert _run_zxpass(qc)
+
+
 # def test_measurement() -> None:
 #     """Test a circuit with measurement.
 # 
@@ -145,3 +158,13 @@ def test_pyzx_issue_102() -> None:
     qc.crx(0.02*np.pi, 2, 0)
 
     assert _run_zxpass(qc)
+
+
+def test_random_circuits() -> None:
+    """Test random circuits.
+    """
+    for _ in range(20):
+        num_qubits = np.random.randint(4, 9)
+        depth = np.random.randint(10, 21)
+        qc = random_circuit(num_qubits, depth)
+        assert _run_zxpass(qc)
