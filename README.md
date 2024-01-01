@@ -33,6 +33,16 @@ zxpass = ZXPass(my_optimize)
 pass_manager = PassManager(zxpass)
 my_qc = pass_manager.run(qc)
 ```
+## Running benchmarks
+
+To perform some benchmarks based on the [QASMBench](https://github.com/pnnl/QASMBench) suite, run the following:
+
+```bash
+cd benchmarking
+python run_benchmarks.py
+```
+
+This will output some statistics and produce 2 PNG files showing the depth compression ratio and ratio of non-local gates between the optimized and original circuits.
 
 ## Previous work
 
