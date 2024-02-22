@@ -2,5 +2,5 @@ pyzx@git+https://github.com/Quantomatic/pyzx
 matplotlib>=3.7.4
 numpy~=1.24.0  # can't go higher for python 3.8
 pytest~=7.4.3
-qiskit~=0.45.0
+qiskit~=1.0.0
 
