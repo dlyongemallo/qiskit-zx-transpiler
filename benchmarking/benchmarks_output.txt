@@ -164,8 +164,8 @@ Depth - original: 17, optimized: 16 (1.06), zx: 19 (0.89)
 Number of non-local gates - original: 13, optimized: 13, zx: 13, ratio: 1.00
 
 Circuit name: multiplier_n15
-Size - original: 73, optimized: 498 (0.15), zx: 467 (0.16)
-Depth - original: 49, optimized: 232 (0.21), zx: 276 (0.18)
+Size - original: 73, optimized: 507 (0.14), zx: 467 (0.16)
+Depth - original: 49, optimized: 238 (0.21), zx: 276 (0.18)
 Number of non-local gates - original: 66, optimized: 222, zx: 235, ratio: 0.94
 
 Circuit name: sat_n11
