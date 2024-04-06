@@ -68,7 +68,7 @@ def _save_plot(title: str, plot_index: List[str], data: Dict[str, List[float]], 
     ax.set_xticklabels(plot_index, rotation=90)
     ax.legend()
     plt.tight_layout()
-    plt.savefig(f"{title}.png")
+    plt.savefig(f"{title.replace(' ', '_')}.png")
 
 
 def run_benchmarks() -> None:
