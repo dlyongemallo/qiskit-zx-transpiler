@@ -12,7 +12,6 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -31,3 +30,12 @@ jobs:
     - name: pytest
       run: |
         pytest ${{ env.TEST_DIR }}
+    - name: Download QASMBench
+      run: |
+        cd benchmarking
+        git clone https://github.com/pnnl/QASMBench.git
+    - name: Run benchmark
+      run: |
+        cd benchmarking
+        chmod +x ./run_benchmarks.sh
+        ./run_benchmarks.sh
