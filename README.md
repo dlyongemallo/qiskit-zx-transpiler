@@ -5,7 +5,7 @@ A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, im
 ## Example usage
 
 ```python
-from qiskit import QuantumCircuit
+from qiskit.circuit import QuantumCircuit
 from qiskit.transpiler import PassManager
 from zxpass import ZXPass
 
