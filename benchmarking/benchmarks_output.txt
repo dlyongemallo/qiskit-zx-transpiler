@@ -4,7 +4,7 @@ Depth - original: 6, optimized: 14 (0.43), zx: 32 (0.19)
 Number of non-local gates - original: 3, optimized: 6, zx: 13, ratio: 0.46
 
 Circuit name: linearsolver_n3
-Size - original: 22, optimized: 16 (1.38), zx: 24 (0.92)
+Size - original: 22, optimized: 14 (1.57), zx: 24 (0.92)
 Depth - original: 12, optimized: 10 (1.20), zx: 16 (0.75)
 Number of non-local gates - original: 4, optimized: 4, zx: 6, ratio: 0.67
 
@@ -54,12 +54,12 @@ Depth - original: 13, optimized: 12 (1.08), zx: 23 (0.57)
 Number of non-local gates - original: 6, optimized: 6, zx: 8, ratio: 0.75
 
 Circuit name: grover_n2
-Size - original: 18, optimized: 10 (1.80), zx: 12 (1.50)
+Size - original: 18, optimized: 9 (2.00), zx: 12 (1.50)
 Depth - original: 12, optimized: 6 (2.00), zx: 7 (1.71)
 Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
 
 Circuit name: hs4_n4
-Size - original: 32, optimized: 20 (1.60), zx: 18 (1.78)
+Size - original: 32, optimized: 16 (2.00), zx: 18 (1.78)
 Depth - original: 10, optimized: 6 (1.67), zx: 7 (1.43)
 Number of non-local gates - original: 4, optimized: 4, zx: 4, ratio: 1.00
 
@@ -74,12 +74,12 @@ Depth - original: 7, optimized: 5 (1.40), zx: 7 (1.00)
 Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
 
 Circuit name: lpn_n5
-Size - original: 16, optimized: 14 (1.14), zx: 12 (1.33)
+Size - original: 16, optimized: 12 (1.33), zx: 12 (1.33)
 Depth - original: 5, optimized: 5 (1.00), zx: 5 (1.00)
 Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
 
 Circuit name: vqe_uccsd_n4
-Size - original: 220, optimized: 150 (1.47), zx: 90 (2.44)
+Size - original: 220, optimized: 144 (1.53), zx: 90 (2.44)
 Depth - original: 145, optimized: 110 (1.32), zx: 70 (2.07)
 Number of non-local gates - original: 88, optimized: 71, zx: 42, ratio: 1.69
 
@@ -114,7 +114,7 @@ Depth - original: 22, optimized: 22 (1.00), zx: 71 (0.31)
 Number of non-local gates - original: 10, optimized: 10, zx: 24, ratio: 0.42
 
 Circuit name: vqe_uccsd_n6
-Size - original: 2282, optimized: 1670 (1.37), zx: 431 (5.29)
+Size - original: 2282, optimized: 1593 (1.43), zx: 431 (5.29)
 Depth - original: 1486, optimized: 1297 (1.15), zx: 307 (4.84)
 Number of non-local gates - original: 1052, optimized: 931, zx: 202, ratio: 4.61
 
@@ -139,12 +139,12 @@ Depth - original: 110, optimized: 46 (2.39), zx: 93 (1.18)
 Number of non-local gates - original: 54, optimized: 36, zx: 74, ratio: 0.49
 
 Circuit name: bb84_n8
-Size - original: 43, optimized: 31 (1.39), zx: 41 (1.05)
+Size - original: 43, optimized: 27 (1.59), zx: 41 (1.05)
 Depth - original: 7, optimized: 4 (1.75), zx: 8 (0.88)
 Number of non-local gates - original: 0, optimized: 0, zx: 0
 
 Circuit name: vqe_uccsd_n8
-Size - original: 10808, optimized: 8150 (1.33), zx: 1621 (6.67)
+Size - original: 10808, optimized: 7763 (1.39), zx: 1621 (6.67)
 Depth - original: 7252, optimized: 6423 (1.13), zx: 1117 (6.49)
 Number of non-local gates - original: 5488, optimized: 4815, zx: 766, ratio: 6.29
 
@@ -164,12 +164,12 @@ Depth - original: 17, optimized: 16 (1.06), zx: 19 (0.89)
 Number of non-local gates - original: 13, optimized: 13, zx: 13, ratio: 1.00
 
 Circuit name: multiplier_n15
-Size - original: 73, optimized: 507 (0.14), zx: 467 (0.16)
-Depth - original: 49, optimized: 238 (0.21), zx: 276 (0.18)
+Size - original: 73, optimized: 495 (0.15), zx: 467 (0.16)
+Depth - original: 49, optimized: 229 (0.21), zx: 276 (0.18)
 Number of non-local gates - original: 66, optimized: 222, zx: 235, ratio: 0.94
 
 Circuit name: sat_n11
-Size - original: 95, optimized: 604 (0.16), zx: 611 (0.16)
+Size - original: 95, optimized: 601 (0.16), zx: 611 (0.16)
 Depth - original: 51, optimized: 388 (0.13), zx: 421 (0.12)
 Number of non-local gates - original: 42, optimized: 252, zx: 256, ratio: 0.98
 
