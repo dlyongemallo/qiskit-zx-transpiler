@@ -17,7 +17,7 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from qiskit import QuantumCircuit, transpile
+from qiskit.circuit import QuantumCircuit, transpile
 from qiskit.transpiler import PassManager
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt  # type: ignore
