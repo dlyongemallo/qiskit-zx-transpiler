@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
 from qiskit.circuit.random import random_circuit

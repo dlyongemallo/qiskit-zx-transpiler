@@ -12,11 +12,10 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -31,3 +30,14 @@ jobs:
     - name: pytest
       run: |
         pytest ${{ env.TEST_DIR }}
+    - name: Download QASMBench
+      run: |
+        cd benchmarking
+        git clone https://github.com/pnnl/QASMBench.git
+    - name: Run benchmark
+      run: |
+        cd benchmarking
+        cp benchmarks_output.txt benchmarks_output.bak
+        chmod +x ./run_benchmarks.sh
+        ./run_benchmarks.sh
+        diff benchmarks_output.bak benchmarks_output.txt

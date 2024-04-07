@@ -1,7 +1,21 @@
-.idea
-.ipynb_checkpoints
-.venv
-.vs
-.vscode
-__pycache__
+# Virtual environments
+.venv/
+
+# IDE configs
+.idea/
+.vs/
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Submodules
 benchmarking/QASMBench

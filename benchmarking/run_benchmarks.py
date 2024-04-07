@@ -17,7 +17,8 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from qiskit import QuantumCircuit, transpile
+from qiskit import transpile
+from qiskit.circuit import QuantumCircuit
 from qiskit.transpiler import PassManager
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt  # type: ignore
@@ -67,7 +68,7 @@ def _save_plot(title: str, plot_index: List[str], data: Dict[str, List[float]], 
     ax.set_xticklabels(plot_index, rotation=90)
     ax.legend()
     plt.tight_layout()
-    plt.savefig(f"{title}.png")
+    plt.savefig(f"{title.replace(' ', '_')}.png")
 
 
 def run_benchmarks() -> None:

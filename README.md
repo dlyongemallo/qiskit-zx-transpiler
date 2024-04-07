@@ -5,7 +5,7 @@ A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, im
 ## Example usage
 
 ```python
-from qiskit import QuantumCircuit
+from qiskit.circuit import QuantumCircuit
 from qiskit.transpiler import PassManager
 from zxpass import ZXPass
 
@@ -33,6 +33,15 @@ zxpass = ZXPass(my_optimize)
 pass_manager = PassManager(zxpass)
 my_qc = pass_manager.run(qc)
 ```
+
+The transpiler is also exposed as a pass manager stage plugin at the optimization stage.
+
+```python
+from qiskit import transpile
+
+zx_qc = transpile(qc, optimization_method="zxpass")
+```
+
 ## Running benchmarks
 
 To perform some benchmarks based on the [QASMBench](https://github.com/pnnl/QASMBench) suite, run the following:
@@ -42,7 +51,7 @@ cd benchmarking
 python run_benchmarks.py
 ```
 
-This will output some statistics and produce 2 PNG files showing the depth compression ratio and ratio of non-local gates between the optimized and original circuits.
+This will output some statistics and produce 2 PNG files showing the depth compression ratio between both Qiskit- and ZX-optimized circuits and the original circuits, and ratio of non-local gates beween the Qiskit- and ZX-optimized circuits.
 
 ## Previous work
 
