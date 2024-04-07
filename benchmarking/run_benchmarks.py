@@ -26,16 +26,18 @@ import matplotlib.pyplot as plt  # type: ignore
 from zxpass import ZXPass
 
 
-zxpass = ZXPass()
-pass_manager = PassManager(zxpass)
+pass_manager = PassManager(ZXPass())
 
 
-def _benchmark(subdir: str, circuit_name: str) -> Tuple[float, float, float]:
+def _benchmark(subdir: str, circuit_name: str, as_plugin: bool = False) -> Tuple[float, float, float]:
     print(f"Circuit name: {circuit_name}")
 
     qc = QuantumCircuit.from_qasm_file(f"QASMBench/{subdir}/{circuit_name}/{circuit_name}.qasm")
     opt_qc = transpile(qc, basis_gates=['u3', 'cx'], optimization_level=3)
-    zx_qc = pass_manager.run(qc)
+    if as_plugin:
+        zx_qc = transpile(qc, optimization_method="zxpass", optimization_level=3)
+    else:
+        zx_qc = pass_manager.run(qc)
 
     print(f"Size - original: {qc.size()}, "
           f"optimized: {opt_qc.size()} ({qc.size() / opt_qc.size():.2f}), "
