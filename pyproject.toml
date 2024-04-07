@@ -41,3 +41,5 @@ Issues = "https://github.com/dlyongemallo/qiskit-zx-transpiler/issues"
 [tool.setuptools.packages.find]
 include = ["zxpass"]
 
+[project.entry-points."qiskit.transpiler.optimization"]
+zxpass = "zxpass.plugin:ZXPlugin"

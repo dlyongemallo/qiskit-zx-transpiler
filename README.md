@@ -33,6 +33,15 @@ zxpass = ZXPass(my_optimize)
 pass_manager = PassManager(zxpass)
 my_qc = pass_manager.run(qc)
 ```
+
+The transpiler is also exposed as a pass manager stage plugin at the optimization stage.
+
+```python
+from qiskit import transpile
+
+zx_qc = transpile(qc, optimization_method="zxpass")
+```
+
 ## Running benchmarks
 
 To perform some benchmarks based on the [QASMBench](https://github.com/pnnl/QASMBench) suite, run the following:
