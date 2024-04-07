@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qiskit-zx-transpiler"
+version = "0.0.1"
+description = "A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."
+requires-python = ">=3.8"
+license = {text = "Apache 2.0"}
+readme = "README.md"
+authors = [
+    { name = "David Yonge-Mallo", email = "dlyongemallo@users.noreply.github.com" },
+]
+keywords = [
+    "qiskit",
+    "zx-calculus",
+    "quantum circuit optimization",
+    "quantum computing",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/dlyongemallo/qiskit-zx-transpiler"
+Repository = "https://github.com/dlyongemallo/qiskit-zx-transpiler"
+Issues = "https://github.com/dlyongemallo/qiskit-zx-transpiler/issues"
+
+[tool.setuptools.packages.find]
+include = ["zxpass"]
+
