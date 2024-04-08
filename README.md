@@ -12,8 +12,7 @@ from zxpass import ZXPass
 # Create a qiskit `QuantumCircuit` here...
 qc = QuantumCircuit(...)
 
-zxpass = ZXPass()
-pass_manager = PassManager(zxpass)
+pass_manager = PassManager(ZXPass())
 zx_qc = pass_manager.run(qc)
 ```
 
@@ -29,8 +28,7 @@ def my_optimize(c: pyzx.Circuit) -> pyzx.Circuit:
     # do stuff to simplify `g`...
     return pyzx.extract.extract_circuit(g)
 
-zxpass = ZXPass(my_optimize)
-pass_manager = PassManager(zxpass)
+pass_manager = PassManager(ZXPass(my_optimize))
 my_qc = pass_manager.run(qc)
 ```
 
