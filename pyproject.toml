@@ -12,6 +12,9 @@ readme = "README.md"
 authors = [
     { name = "David Yonge-Mallo", email = "dlyongemallo@users.noreply.github.com" },
 ]
+dependencies = [
+    "pyzx>=0.8.0",
+]
 keywords = [
     "qiskit",
     "zx-calculus",
