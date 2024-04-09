@@ -83,6 +83,12 @@ qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
 }
 
 
+def _optimize(c: zx.Circuit) -> zx.Circuit:
+    g = c.to_graph()
+    zx.simplify.full_reduce(g)
+    return zx.extract.extract_circuit(g)
+
+
 class ZXPass(TransformationPass):
     """This is a ZX transpiler pass using PyZX for circuit optimization.
 
@@ -99,12 +105,7 @@ class ZXPass(TransformationPass):
         self.qregs: OrderedDict[str, Qubit] = OrderedDict()
         self.qubits: List[Qubit] = []
         self.qubit_to_index: Dict[Qubit, int] = {}
-        self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or self._optimize
-
-    def _optimize(self, c: zx.Circuit) -> zx.Circuit:
-        g = c.to_graph()
-        zx.simplify.full_reduce(g)
-        return zx.extract.extract_circuit(g)
+        self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or _optimize
 
     def _dag_to_circuits_and_nodes(self, dag: DAGCircuit) -> List[Union[zx.Circuit, DAGOpNode]]:
         """Convert a DAG to a list of PyZX Circuits and DAGOpNodes. As much of the DAG is converted to PyZX Circuits as
