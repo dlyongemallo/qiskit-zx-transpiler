@@ -13,16 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit.transpiler.basepasses import TransformationPass
-from qiskit.transpiler.preset_passmanagers.plugin import PassManagerStagePlugin
-from qiskit.transpiler import PassManagerConfig, PassManager
+"""A transpiler stage plugin for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."""
 
 from typing import Optional
+
+from qiskit.transpiler.preset_passmanagers.plugin import PassManagerStagePlugin
+from qiskit.transpiler import PassManagerConfig, PassManager
 
 from .zxpass import ZXPass
 
 
-class ZXPlugin(PassManagerStagePlugin):
+class ZXPlugin(PassManagerStagePlugin):  # pylint: disable=too-few-public-methods
+    """Plugin class for optimization stage with :class:`~.ZXPass`."""
+
     def pass_manager(
         self, pass_manager_config: PassManagerConfig, optimization_level: Optional[int] = None
     ) -> PassManager:
