@@ -13,4 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."""
+
 from .zxpass import ZXPass

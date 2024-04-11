@@ -27,10 +27,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install mypy==1.9.0
+        pip install pylint==3.1.0
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: mypy
       run: |
         mypy ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
+    - name: pylint
+      run: |
+        pylint ${{ env.SRC_DIR }} ${{ env.TEST_DIR }}
     - name: pytest
       run: |
         pytest ${{ env.TEST_DIR }}

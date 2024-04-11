@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."""
+
+from collections import OrderedDict
+from typing import Dict, List, Tuple, Callable, Optional, Type, Union
+import numpy as np
+
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit, DAGOpNode
 from qiskit.circuit import Qubit, Clbit, Instruction
@@ -31,10 +37,6 @@ from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
 from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
-
-from collections import OrderedDict
-import numpy as np
-from typing import Dict, List, Tuple, Callable, Optional, Type, Union
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     # OpenQASM gate name: (PyZX gate type, Qiskit gate type, number of qubits, number of parameters, adjoint)
@@ -128,6 +130,7 @@ class ZXPass(TransformationPass):
             # TODO: It might be possible to do something more clever here by "snipping out" the unsupported operations,
             #       optimizing the rest of the circuit, and then reinserting the unsupported operations, but this is
             #       very tricky as the unsupported operations may have side effects on the rest of the circuit.
+            #       See https://github.com/dlyongemallo/qiskit-zx-transpiler/issues/18.
             if gate.name not in qiskit_gate_table or gate.condition is not None:
                 # Encountered an operation not supported by PyZX, so just store the DAGOpNode.
                 # Flush the current PyZX Circuit first if there is one.
@@ -186,7 +189,7 @@ class ZXPass(TransformationPass):
                     params = [float(gate.phase) * np.pi]
                 elif hasattr(gate, 'phases'):
                     params = [float(phase) * np.pi for phase in gate.phases]
-                _, gate_type, num_qubits, num_params, *adjoint = qiskit_gate_table[gate_name]  # type: ignore
+                _, gate_type, _, _, *_ = qiskit_gate_table[gate_name]  # type: ignore
                 dag.apply_operation_back(gate_type(*params), tuple(qargs))
 
         return dag

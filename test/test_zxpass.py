@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Tests for Qiskit ZX transpiler."""
+
+from typing import Callable, Optional
+import pyzx as zx
+import numpy as np
+
 from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
 from qiskit.circuit.random import random_circuit
 import qiskit.converters
-from typing import Callable, Optional
+
 from zxpass import ZXPass
-import pyzx as zx
-import numpy as np
 
 
 def _run_zxpass(qc: QuantumCircuit, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None) -> bool:
@@ -89,7 +93,7 @@ def test_measurement() -> None:
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
-    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(dag)
+    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(dag)  # pylint: disable=protected-access
     assert len(circuits_and_nodes) == 3
     assert circuits_and_nodes[1] == dag.op_nodes()[1]
 
