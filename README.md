@@ -2,6 +2,11 @@
 
 A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX.
 
+[![License](https://img.shields.io/github/license/dlyongemallo/qiskit-zx-transpiler.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qiskit-zx-transpiler)]()
+[![PyPI - Package Version](https://badge.fury.io/py/qiskit-zx-transpiler.svg)](https://badge.fury.io/py/qiskit-zx-transpiler)
+[![CI Status](https://github.com/dlyongemallo/qiskit-zx-transpiler/actions/workflows/test.yml/badge.svg)](https://github.com/dlyongemallo/qiskit-zx-transpiler/actions/workflows/test.yml)
+
 ## Example usage
 
 ```python
