@@ -160,7 +160,7 @@ class ZXPass(TransformationPass):
         return circuits_and_nodes
 
     def _recover_dag(self, circuits_and_nodes: List[Union[zx.Circuit, DAGOpNode]]) -> DAGCircuit:
-        """Recovers a DAG from a list of a pyzx Circuits and DAGOpNodes
+        """Recover a DAG from a list of a pyzx Circuits and DAGOpNodes.
 
         :param circuits_and_nodes: The list of (optimized) PyZX Circuits and DAGOpNodes from which to recover the DAG.
         :return: An optimized version of the original input DAG to ZXPass.
@@ -171,11 +171,11 @@ class ZXPass(TransformationPass):
         dag.add_clbits(self.clbits)
         dag.qregs = self.qregs
         dag.add_qubits(self.qubits)
-        for circuit in circuits_and_nodes:
-            if isinstance(circuit, DAGOpNode):
-                dag.apply_operation_back(circuit.op, circuit.qargs, circuit.cargs)
+        for circuit_or_node in circuits_and_nodes:
+            if isinstance(circuit_or_node, DAGOpNode):
+                dag.apply_operation_back(circuit_or_node.op, circuit_or_node.qargs, circuit_or_node.cargs)
                 continue
-            for gate in circuit.gates:
+            for gate in circuit_or_node.gates:
                 gate_name = gate.qasm_name if not (hasattr(gate, 'adjoint') and gate.adjoint) \
                     else gate.qasm_name_adjoint
                 if gate_name not in qiskit_gate_table:
@@ -195,8 +195,7 @@ class ZXPass(TransformationPass):
         return dag
 
     def run(self, dag: DAGCircuit) -> DAGCircuit:
-        """
-        Run the ZX transpiler pass on the given DAG.
+        """Run the ZX transpiler pass on the given DAG.
 
         :param dag: The directed acyclic graph to optimize using pyzx.
         :return: The transformed DAG.
