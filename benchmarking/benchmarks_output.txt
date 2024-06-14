@@ -39,9 +39,9 @@ Depth - original: 5, optimized: 5 (1.00), zx: 8 (0.62)
 Number of non-local gates - original: 3, optimized: 3, zx: 3, ratio: 1.00
 
 Circuit name: basis_trotter_n4
-Size - original: 1510, optimized: 653 (2.31), zx: 567 (2.66)
-Depth - original: 815, optimized: 284 (2.87), zx: 413 (1.97)
-Number of non-local gates - original: 462, optimized: 215, zx: 175, ratio: 1.23
+Size - original: 1510, optimized: 545 (2.77), zx: 567 (2.66)
+Depth - original: 815, optimized: 248 (3.29), zx: 413 (1.97)
+Number of non-local gates - original: 462, optimized: 179, zx: 175, ratio: 1.02
 
 Circuit name: qec_en_n5
 Size - original: 30, optimized: 27 (1.11), zx: 30 (1.00)
@@ -114,12 +114,12 @@ Depth - original: 22, optimized: 22 (1.00), zx: 71 (0.31)
 Number of non-local gates - original: 10, optimized: 10, zx: 24, ratio: 0.42
 
 Circuit name: vqe_uccsd_n6
-Size - original: 2282, optimized: 1593 (1.43), zx: 431 (5.29)
+Size - original: 2282, optimized: 1607 (1.42), zx: 431 (5.29)
 Depth - original: 1486, optimized: 1297 (1.15), zx: 307 (4.84)
-Number of non-local gates - original: 1052, optimized: 931, zx: 202, ratio: 4.61
+Number of non-local gates - original: 1052, optimized: 924, zx: 202, ratio: 4.57
 
 Circuit name: ising_n10
-Size - original: 490, optimized: 245 (2.00), zx: 442 (1.11)
+Size - original: 490, optimized: 225 (2.18), zx: 442 (1.11)
 Depth - original: 71, optimized: 42 (1.69), zx: 107 (0.66)
 Number of non-local gates - original: 90, optimized: 90, zx: 142, ratio: 0.63
 
@@ -144,9 +144,9 @@ Depth - original: 7, optimized: 4 (1.75), zx: 8 (0.88)
 Number of non-local gates - original: 0, optimized: 0, zx: 0
 
 Circuit name: vqe_uccsd_n8
-Size - original: 10808, optimized: 7763 (1.39), zx: 1621 (6.67)
+Size - original: 10808, optimized: 7777 (1.39), zx: 1621 (6.67)
 Depth - original: 7252, optimized: 6423 (1.13), zx: 1117 (6.49)
-Number of non-local gates - original: 5488, optimized: 4815, zx: 766, ratio: 6.29
+Number of non-local gates - original: 5488, optimized: 4808, zx: 766, ratio: 6.28
 
 Circuit name: adder_n10
 Size - original: 19, optimized: 139 (0.14), zx: 31 (0.61)
@@ -174,7 +174,7 @@ Depth - original: 51, optimized: 388 (0.13), zx: 421 (0.12)
 Number of non-local gates - original: 42, optimized: 252, zx: 256, ratio: 0.98
 
 Circuit name: qft_n18
-Size - original: 801, optimized: 801 (1.00), zx: 995 (0.81)
-Depth - original: 134, optimized: 134 (1.00), zx: 516 (0.26)
+Size - original: 801, optimized: 665 (1.20), zx: 995 (0.81)
+Depth - original: 134, optimized: 118 (1.14), zx: 516 (0.26)
 Number of non-local gates - original: 306, optimized: 306, zx: 432, ratio: 0.71
 
