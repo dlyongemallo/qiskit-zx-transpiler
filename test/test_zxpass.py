@@ -28,7 +28,9 @@ import qiskit.converters
 from zxpass import ZXPass
 
 
-def _run_zxpass(qc: QuantumCircuit, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None) -> bool:
+def _run_zxpass(
+    qc: QuantumCircuit, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None
+) -> bool:
     zxpass = ZXPass(optimize)
     pass_manager = PassManager(zxpass)
     zx_qc = pass_manager.run(qc)
@@ -62,8 +64,7 @@ def test_basic_circuit() -> None:
 
 
 def test_custom_optimize() -> None:
-    """Test custom optimize method.
-    """
+    """Test custom optimize method."""
     qc = QuantumCircuit(4)
     qc.h(0)
     qc.h(1)
@@ -82,10 +83,9 @@ def test_custom_optimize() -> None:
 
 
 def test_measurement() -> None:
-    """Test a circuit with a measurement.
-    """
-    q = QuantumRegister(1, 'q')
-    c = ClassicalRegister(1, 'c')
+    """Test a circuit with a measurement."""
+    q = QuantumRegister(1, "q")
+    c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
     qc.h(q[0])
     qc.measure(q[0], c[0])
@@ -93,16 +93,17 @@ def test_measurement() -> None:
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
-    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(dag)  # pylint: disable=protected-access
+    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(  # pylint: disable=protected-access
+        dag
+    )
     assert len(circuits_and_nodes) == 3
     assert circuits_and_nodes[1] == dag.op_nodes()[1]
 
 
 def test_conditional_gate() -> None:
-    """Test a circuit with a conditional gate.
-    """
-    q = QuantumRegister(1, 'q')
-    c = ClassicalRegister(1, 'c')
+    """Test a circuit with a conditional gate."""
+    q = QuantumRegister(1, "q")
+    c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
     qc.h(q[0]).c_if(c, 0)
 
@@ -110,12 +111,8 @@ def test_conditional_gate() -> None:
 
 
 def test_unitary() -> None:
-    """Test a circuit with a unitary gate.
-    """
-    matrix = [[0, 0, 0, 1],
-              [0, 0, 1, 0],
-              [1, 0, 0, 0],
-              [0, 1, 0, 0]]
+    """Test a circuit with a unitary gate."""
+    matrix = [[0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0]]
     qc = QuantumCircuit(2)
     qc.unitary(matrix, [0, 1])
 
@@ -140,17 +137,16 @@ def test_pyzx_issue_102() -> None:
     qc.ccz(2, 1, 0)
     qc.s(1)
     qc.ccx(2, 1, 0)
-    qc.crz(0.2*np.pi, 0, 1)
-    qc.rz(0.8*np.pi, 1)
-    qc.cry(0.4*np.pi, 2, 1)
-    qc.crx(0.02*np.pi, 2, 0)
+    qc.crz(0.2 * np.pi, 0, 1)
+    qc.rz(0.8 * np.pi, 1)
+    qc.cry(0.4 * np.pi, 2, 1)
+    qc.crx(0.02 * np.pi, 2, 0)
 
     assert _run_zxpass(qc)
 
 
 def test_random_circuits() -> None:
-    """Test random circuits.
-    """
+    """Test random circuits."""
     for _ in range(20):
         num_qubits = np.random.randint(4, 9)
         depth = np.random.randint(10, 21)

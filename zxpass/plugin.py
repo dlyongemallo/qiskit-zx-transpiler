@@ -27,6 +27,8 @@ class ZXPlugin(PassManagerStagePlugin):  # pylint: disable=too-few-public-method
     """Plugin class for optimization stage with :class:`~.ZXPass`."""
 
     def pass_manager(
-        self, pass_manager_config: PassManagerConfig, optimization_level: Optional[int] = None
+        self,
+        pass_manager_config: PassManagerConfig,
+        optimization_level: Optional[int] = None,
     ) -> PassManager:
         return PassManager([ZXPass()])
