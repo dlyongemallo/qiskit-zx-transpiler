@@ -16,6 +16,7 @@
 """A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."""
 
 from typing import Dict, List, Tuple, Callable, Optional, Type, Union
+from fractions import Fraction
 import numpy as np
 
 from qiskit.transpiler.basepasses import TransformationPass
@@ -158,11 +159,11 @@ class ZXPass(TransformationPass):
                 current_circuit = zx.Circuit(len(dag.qubits))
             current_circuit.add_gate(
                 gate_type(
-                    *[qubit_to_index[qarg] for qarg in node.qargs],  # type: ignore
-                    *[param / np.pi for param in node.op.params],  # type: ignore
+                    *[qubit_to_index[qarg] for qarg in node.qargs],
+                    *[Fraction(param / np.pi) for param in node.op.params],
                     **kwargs,
                 )
-            )  # type: ignore
+            )
 
         # Flush any remaining PyZX Circuit.
         if current_circuit is not None:
@@ -210,7 +211,7 @@ class ZXPass(TransformationPass):
                     params = [float(gate.phase) * np.pi]
                 elif hasattr(gate, "phases"):
                     params = [float(phase) * np.pi for phase in gate.phases]
-                _, gate_type, _, _, *_ = qiskit_gate_table[gate_name]  # type: ignore
+                _, gate_type, _, _, *_ = qiskit_gate_table[gate_name]
                 dag.apply_operation_back(gate_type(*params), tuple(qargs))
 
         return dag
