@@ -107,17 +107,61 @@ _conditional_inner_gates = {
 }
 
 
-def _optimize(c: zx.Circuit) -> zx.Circuit:
+def _is_unitary_gate(gate: Gate) -> bool:
+    """Check whether a PyZX gate is a unitary gate (not measurement, reset, or conditional)."""
+    return not isinstance(gate, (PyzxMeasurement, PyzxReset, ConditionalGate))
+
+
+def _optimize_unitary(c: zx.Circuit) -> zx.Circuit:
+    """Optimise a purely unitary PyZX circuit using full_reduce and extraction."""
     g = c.to_graph()
     zx.simplify.full_reduce(g)
     return zx.extract.extract_circuit(g)
 
 
+def _optimize(c: zx.Circuit) -> zx.Circuit:
+    """Optimise a PyZX circuit, handling hybrid (non-unitary) circuits.
+
+    For purely unitary circuits, uses full_reduce + extract_circuit. For hybrid
+    circuits containing measurements, resets, or conditional gates, splits the
+    circuit at non-unitary boundaries, optimises each unitary segment
+    independently, and reassembles.
+    """
+    if all(_is_unitary_gate(g) for g in c.gates):
+        return _optimize_unitary(c)
+
+    # Split the circuit into unitary segments and non-unitary gates.
+    result = zx.Circuit(c.qubits, bit_amount=c.bits or None)
+    current_gates: List[Gate] = []
+
+    def _flush_unitary() -> None:
+        if not current_gates:
+            return
+        segment = zx.Circuit(c.qubits)
+        for g in current_gates:
+            segment.add_gate(g)
+        current_gates.clear()
+        optimized = _optimize_unitary(segment)
+        for g in optimized.gates:
+            result.add_gate(g)
+
+    for gate in c.gates:
+        if _is_unitary_gate(gate):
+            current_gates.append(gate)
+        else:
+            _flush_unitary()
+            result.add_gate(gate)
+
+    _flush_unitary()
+    return result
+
+
 class ZXPass(TransformationPass):
     """This is a ZX transpiler pass using PyZX for circuit optimization.
 
-    :param optimize: The function to use for optimizing a PyZX Circuit. If not specified, uses
-        :py:meth:`~pyzx.simplify.full_reduce` by default.
+    :param optimize: The function to use for optimizing a PyZX Circuit. If not specified, applies
+        :py:meth:`~pyzx.simplify.full_reduce` followed by :py:meth:`~pyzx.extract.extract_circuit`,
+        splitting at non-unitary boundaries (measurements, resets, conditional gates) when present.
     :type optimize: Callable[[pyzx.Circuit], pyzx.Circuit], optional
     """
 
