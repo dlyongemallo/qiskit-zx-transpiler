@@ -24,8 +24,11 @@ sibling ``test_*.py`` files.
 import pyzx as zx
 import numpy as np
 
+import qiskit.converters
 from qiskit.circuit import QuantumCircuit
 from qiskit.circuit.random import random_circuit
+
+from zxpass import ZXPass
 
 from ._helpers import run_zxpass
 
@@ -116,3 +119,54 @@ def test_random_circuits() -> None:
         depth = np.random.randint(10, 21)
         qc = random_circuit(num_qubits, depth)
         assert run_zxpass(qc)
+
+
+def test_no_regression() -> None:
+    """``ZXPass.run`` should not return a DAG with a larger operation count."""
+    for _ in range(20):
+        num_qubits = np.random.randint(2, 7)
+        depth = np.random.randint(5, 21)
+        qc = random_circuit(num_qubits, depth)
+        dag = qiskit.converters.circuit_to_dag(qc)
+        original_count = dag.size(recurse=True)
+
+        zxpass = ZXPass()
+        optimized_dag = zxpass.run(dag)
+        optimized_count = optimized_dag.size(recurse=True)
+
+        assert optimized_count <= original_count, (
+            f"ZXPass increased operation count from {original_count} to {optimized_count}"
+        )
+
+
+def test_custom_optimize_result_preserved_when_inflating() -> None:
+    """A custom ``optimize`` callback's result must not be discarded when it inflates the circuit.
+
+    Custom optimisers may target metrics other than total operation count
+    (e.g. depth, T-count), so the default-optimiser regression guard in
+    ``ZXPass.run`` should not apply to them.
+    """
+    qc = QuantumCircuit(2)
+    qc.h(0)
+    qc.cx(0, 1)
+
+    dag = qiskit.converters.circuit_to_dag(qc)
+    original_count = dag.size(recurse=True)
+
+    def optimize(circ: zx.Circuit) -> zx.Circuit:
+        inflated = zx.Circuit(circ.qubits, bit_amount=circ.bits or None)
+        for gate in circ.gates:
+            inflated.add_gate(gate)
+        # Append a cancelling Hadamard pair to inflate the circuit.
+        inflated.add_gate("HAD", 0)
+        inflated.add_gate("HAD", 0)
+        return inflated
+
+    zxpass = ZXPass(optimize=optimize)
+    optimized_dag = zxpass.run(dag)
+    optimized_count = optimized_dag.size(recurse=True)
+
+    assert optimized_count > original_count, (
+        f"Custom optimize result should not be discarded by the gate-count guard; "
+        f"expected size > {original_count}, got {optimized_count}"
+    )

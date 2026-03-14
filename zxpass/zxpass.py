@@ -556,7 +556,16 @@ class ZXPass(TransformationPass):
             for circuit in circuits_and_nodes
         ]
 
-        return self._recover_dag(circuits_and_nodes, dag)
+        optimized_dag = self._recover_dag(circuits_and_nodes, dag)
+
+        # Guard against regressions for the default optimiser only: keep the
+        # original DAG if the total operation count increased. Custom
+        # ``optimize`` callbacks may target other metrics (e.g. depth, T-count),
+        # so their results are not discarded here.
+        if self.optimize is _optimize and optimized_dag.size(recurse=True) > dag.size(recurse=True):
+            return dag
+
+        return optimized_dag
 
     def name(self) -> str:
         return "ZXPass"
