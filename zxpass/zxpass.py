@@ -21,7 +21,7 @@ import numpy as np
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit, DAGOpNode
-from qiskit.circuit import Qubit, Instruction
+from qiskit.circuit import Qubit, Instruction, Measure, Reset
 
 from qiskit.circuit.library import XGate, YGate, ZGate, HGate, SGate, TGate, SXGate
 from qiskit.circuit.library import SdgGate, TdgGate, SXdgGate
@@ -55,6 +55,7 @@ from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
 from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
+from pyzx.circuit.gates import Measurement as PyzxMeasurement, Reset as PyzxReset
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     # OpenQASM gate name: (PyZX gate type, Qiskit gate type, number of qubits, number of parameters, adjoint)
@@ -127,17 +128,45 @@ class ZXPass(TransformationPass):
 
         circuits_and_nodes: List[Union[zx.Circuit, DAGOpNode]] = []
         qubit_to_index = {qubit: index for index, qubit in enumerate(dag.qubits)}
+        clbit_to_index = {clbit: index for index, clbit in enumerate(dag.clbits)}
 
         current_circuit: Optional[zx.Circuit] = None
+
+        def _ensure_circuit() -> zx.Circuit:
+            nonlocal current_circuit
+            if current_circuit is None:
+                current_circuit = zx.Circuit(
+                    len(dag.qubits),
+                    bit_amount=len(dag.clbits) if dag.clbits else None,
+                )
+            return current_circuit
+
         for node in dag.topological_op_nodes():
             gate = node.op
-            # TODO: It might be possible to do something more clever here by "snipping out" the unsupported operations,
-            #       optimizing the rest of the circuit, and then reinserting the unsupported operations, but this is
-            #       very tricky as the unsupported operations may have side effects on the rest of the circuit.
-            #       See https://github.com/dlyongemallo/qiskit-zx-transpiler/issues/18.
+
+            if gate.name == "measure" and gate.condition is None:
+                _ensure_circuit().add_gate(
+                    PyzxMeasurement(
+                        qubit_to_index[node.qargs[0]],
+                        result_bit=clbit_to_index[node.cargs[0]],
+                    )
+                )
+                continue
+
+            if gate.name == "reset" and gate.condition is None:
+                _ensure_circuit().add_gate(
+                    PyzxReset(qubit_to_index[node.qargs[0]])
+                )
+                continue
+
             if gate.name not in qiskit_gate_table or gate.condition is not None:
                 # Encountered an operation not supported by PyZX, so just store the DAGOpNode.
                 # Flush the current PyZX Circuit first if there is one.
+                # TODO: It might be possible to do something more clever here by "snipping out"
+                # the unsupported operations, optimizing the rest of the circuit, and then
+                # reinserting the unsupported operations, but this is very tricky as the unsupported
+                # operations may have side effects on the rest of the circuit.
+                # See https://github.com/dlyongemallo/qiskit-zx-transpiler/issues/18.
                 if current_circuit is not None:
                     circuits_and_nodes.append(current_circuit)
                     current_circuit = None
@@ -155,9 +184,7 @@ class ZXPass(TransformationPass):
                     f"{node.op.params}."
                 )
             kwargs = {"adjoint": adjoint[0]} if adjoint else {}
-            if current_circuit is None:
-                current_circuit = zx.Circuit(len(dag.qubits))
-            current_circuit.add_gate(
+            _ensure_circuit().add_gate(
                 gate_type(
                     *[qubit_to_index[qarg] for qarg in node.qargs],
                     *[Fraction(param / np.pi) for param in node.op.params],
@@ -195,6 +222,17 @@ class ZXPass(TransformationPass):
                 )
                 continue
             for gate in circuit_or_node.gates:
+                if isinstance(gate, PyzxMeasurement):
+                    qubit = original_dag.qubits[gate.target]
+                    clbit = original_dag.clbits[gate.result_bit]
+                    dag.apply_operation_back(Measure(), (qubit,), (clbit,))
+                    continue
+
+                if isinstance(gate, PyzxReset):
+                    qubit = original_dag.qubits[gate.target]
+                    dag.apply_operation_back(Reset(), (qubit,))
+                    continue
+
                 gate_name = (
                     gate.qasm_name
                     if not (hasattr(gate, "adjoint") and gate.adjoint)
