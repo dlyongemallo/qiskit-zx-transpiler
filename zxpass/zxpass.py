@@ -21,7 +21,7 @@ import numpy as np
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit, DAGOpNode
-from qiskit.circuit import Qubit, Instruction, Measure, Reset
+from qiskit.circuit import Qubit, Instruction, Measure, Reset, ClassicalRegister
 
 from qiskit.circuit.library import XGate, YGate, ZGate, HGate, SGate, TGate, SXGate
 from qiskit.circuit.library import SdgGate, TdgGate, SXdgGate
@@ -56,6 +56,7 @@ from pyzx.circuit.gates import SWAP, CNOT, CY, CZ, CHAD, CSX
 from pyzx.circuit.gates import CRX, CRY, CRZ, CPhase, RXX, RZZ, CU3, CU
 from pyzx.circuit.gates import CSWAP, Tofolli, CCZ
 from pyzx.circuit.gates import Measurement as PyzxMeasurement, Reset as PyzxReset
+from pyzx.circuit.gates import ConditionalGate
 
 qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     # OpenQASM gate name: (PyZX gate type, Qiskit gate type, number of qubits, number of parameters, adjoint)
@@ -97,6 +98,14 @@ qiskit_gate_table: Dict[str, Tuple[Type[Gate], Type[Instruction], int, int]] = {
     "ccz": (CCZ, CCZGate, 3, 0),
 }
 
+# Gates that can appear as inner gates in a ConditionalGate. These must be
+# single-qubit Z or X rotations (subclasses of ZPhase or XPhase in PyZX).
+_conditional_inner_gates = {
+    "x", "z", "s", "t", "sx",
+    "sdg", "tdg", "sxdg",
+    "rx", "rz", "p", "u1",
+}
+
 
 def _optimize(c: zx.Circuit) -> zx.Circuit:
     g = c.to_graph()
@@ -115,6 +124,39 @@ class ZXPass(TransformationPass):
     def __init__(self, optimize: Optional[Callable[[zx.Circuit], zx.Circuit]] = None):
         super().__init__()
         self.optimize: Callable[[zx.Circuit], zx.Circuit] = optimize or _optimize
+
+    @staticmethod
+    def _try_convert_conditional(
+        node: DAGOpNode,
+        qubit_to_index: Dict[Qubit, int],
+    ) -> Optional[ConditionalGate]:
+        """Try to convert a conditional DAGOpNode to a PyZX ConditionalGate.
+
+        Returns ``None`` if the gate is not a supported conditional conversion
+        (e.g. unsupported gate type, Clbit condition, or multi-qubit gate).
+        """
+        gate = node.op
+        cond_reg, cond_val = gate.condition
+        if not isinstance(cond_reg, ClassicalRegister):
+            return None
+        if gate.name not in _conditional_inner_gates or gate.name not in qiskit_gate_table:
+            return None
+        if len(node.qargs) != 1:
+            return None
+        gate_type, _, _, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
+        if len(node.op.params) != num_params:
+            raise ValueError(
+                f"Expected {num_params} parameters for conditional gate "
+                f"{gate.name}, got {len(node.op.params)}: {node.op.params}."
+            )
+        inner_gate = gate_type(  # type: ignore[call-arg]
+            qubit_to_index[node.qargs[0]],
+            *[Fraction(param / np.pi) for param in node.op.params],
+            **{"adjoint": adjoint[0]} if adjoint else {},
+        )
+        return ConditionalGate(
+            cond_reg.name, int(cond_val), inner_gate, cond_reg.size
+        )
 
     def _dag_to_circuits_and_nodes(
         self, dag: DAGCircuit
@@ -159,8 +201,17 @@ class ZXPass(TransformationPass):
                 )
                 continue
 
+            # Handle conditional gates: convert supported single-qubit Z/X
+            # rotations to PyZX ConditionalGate; otherwise store as DAGOpNode.
+            if gate.condition is not None:
+                converted = self._try_convert_conditional(node, qubit_to_index)
+                if converted is not None:
+                    _ensure_circuit().add_gate(converted)
+                    continue
+
             if gate.name not in qiskit_gate_table or gate.condition is not None:
-                # Encountered an operation not supported by PyZX, so just store the DAGOpNode.
+                # Encountered an operation not supported by PyZX (or an unsupported
+                # conditional gate), so just store the DAGOpNode.
                 # Flush the current PyZX Circuit first if there is one.
                 # TODO: It might be possible to do something more clever here by "snipping out"
                 # the unsupported operations, optimizing the rest of the circuit, and then
@@ -172,6 +223,7 @@ class ZXPass(TransformationPass):
                     current_circuit = None
                 circuits_and_nodes.append(node)
                 continue
+
             gate_type, _, num_qubits, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
             if len(node.qargs) != num_qubits:
                 raise ValueError(
@@ -197,6 +249,33 @@ class ZXPass(TransformationPass):
             circuits_and_nodes.append(current_circuit)
 
         return circuits_and_nodes
+
+    @staticmethod
+    def _recover_conditional_gate(
+        gate: ConditionalGate, original_dag: DAGCircuit, dag: DAGCircuit
+    ) -> None:
+        """Recover a ConditionalGate from a PyZX circuit into a Qiskit DAG."""
+        inner = gate.inner_gate
+        inner_name = (
+            inner.qasm_name
+            if not (hasattr(inner, "adjoint") and inner.adjoint)
+            else inner.qasm_name_adjoint
+        )
+        if inner_name not in qiskit_gate_table:
+            raise ValueError(
+                f"Unsupported inner gate in ConditionalGate: {inner_name}."
+            )
+        qubit = original_dag.qubits[inner.target]  # type: ignore[attr-defined]
+        params: List[float] = []
+        num_params = qiskit_gate_table[inner_name][3]
+        if num_params > 0 and hasattr(inner, "phase"):
+            params = [float(inner.phase) * np.pi]
+        _, inner_gate_type, _, _, *_ = qiskit_gate_table[inner_name]
+        qiskit_gate = inner_gate_type(*params)
+        # Find the classical register by name.
+        creg = original_dag.cregs[gate.condition_register]
+        qiskit_gate = qiskit_gate.c_if(creg, gate.condition_value)
+        dag.apply_operation_back(qiskit_gate, (qubit,))
 
     def _recover_dag(
         self,
@@ -231,6 +310,10 @@ class ZXPass(TransformationPass):
                 if isinstance(gate, PyzxReset):
                     qubit = original_dag.qubits[gate.target]
                     dag.apply_operation_back(Reset(), (qubit,))
+                    continue
+
+                if isinstance(gate, ConditionalGate):
+                    self._recover_conditional_gate(gate, original_dag, dag)
                     continue
 
                 gate_name = (
