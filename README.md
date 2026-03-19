@@ -22,8 +22,10 @@ zx_qc = pass_manager.run(qc)
 ```
 
 It is also possible to initialise `ZXPass` with a custom optimization function.
-(The default, if none is supplied, is to call `pyzx.simplify.full_reduce`
-on the graph of the circuit.)
+(The default, if none is supplied, applies `pyzx.simplify.full_reduce` followed
+by `pyzx.extract.extract_circuit`. Circuits containing measurements, resets, or
+conditional gates are split at non-unitary boundaries and each unitary segment
+is optimised independently.)
 
 ```python
 import pyzx
