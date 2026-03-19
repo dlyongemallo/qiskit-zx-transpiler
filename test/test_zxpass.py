@@ -17,9 +17,11 @@
 
 from typing import Callable, Optional
 import pyzx as zx
+from pyzx.circuit.gates import Measurement as PyzxMeasurement, Reset as PyzxReset
 import numpy as np
 
 from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.circuit import Measure, Reset
 from qiskit.quantum_info import Statevector
 from qiskit.transpiler import PassManager
 from qiskit.circuit.random import random_circuit
@@ -83,7 +85,7 @@ def test_custom_optimize() -> None:
 
 
 def test_measurement() -> None:
-    """Test a circuit with a measurement."""
+    """Test that measurements are included in the PyZX circuit and round-trip correctly."""
     q = QuantumRegister(1, "q")
     c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
@@ -96,8 +98,53 @@ def test_measurement() -> None:
     circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(  # pylint: disable=protected-access
         dag
     )
-    assert len(circuits_and_nodes) == 3
-    assert circuits_and_nodes[1] == dag.op_nodes()[1]
+    assert len(circuits_and_nodes) == 1
+    assert isinstance(circuits_and_nodes[0], zx.Circuit)
+    gates = circuits_and_nodes[0].gates
+    assert len(gates) == 3
+    assert isinstance(gates[1], PyzxMeasurement)
+    assert gates[1].target == 0
+    assert gates[1].result_bit == 0
+
+    # Round-trip: convert back to DAG and verify measure is preserved.
+    identity = ZXPass(optimize=lambda circ: circ)
+    result_dag = identity.run(dag)
+    op_names = [node.op.name for node in result_dag.topological_op_nodes()]
+    assert op_names == ["h", "measure", "h"]
+    measure_node = [n for n in result_dag.topological_op_nodes() if n.op.name == "measure"][0]
+    assert isinstance(measure_node.op, Measure)
+    assert measure_node.qargs == (q[0],)
+    assert measure_node.cargs == (c[0],)
+
+
+def test_reset() -> None:
+    """Test that resets are included in the PyZX circuit and round-trip correctly."""
+    q = QuantumRegister(1, "q")
+    qc = QuantumCircuit(q)
+    qc.h(q[0])
+    qc.reset(q[0])
+    qc.h(q[0])
+
+    dag = qiskit.converters.circuit_to_dag(qc)
+    zxpass = ZXPass()
+    circuits_and_nodes = zxpass._dag_to_circuits_and_nodes(  # pylint: disable=protected-access
+        dag
+    )
+    assert len(circuits_and_nodes) == 1
+    assert isinstance(circuits_and_nodes[0], zx.Circuit)
+    gates = circuits_and_nodes[0].gates
+    assert len(gates) == 3
+    assert isinstance(gates[1], PyzxReset)
+    assert gates[1].target == 0
+
+    # Round-trip: convert back to DAG and verify reset is preserved.
+    identity = ZXPass(optimize=lambda circ: circ)
+    result_dag = identity.run(dag)
+    op_names = [node.op.name for node in result_dag.topological_op_nodes()]
+    assert op_names == ["h", "reset", "h"]
+    reset_node = [n for n in result_dag.topological_op_nodes() if n.op.name == "reset"][0]
+    assert isinstance(reset_node.op, Reset)
+    assert reset_node.qargs == (q[0],)
 
 
 def test_conditional_gate() -> None:
