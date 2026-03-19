@@ -38,16 +38,19 @@ jobs:
     - name: pytest
       run: |
         pytest ${{ env.TEST_DIR }}
-    # TODO: Benchmark requires optimisation changes to handle circuits with
-    # measure/reset gates. Re-enable once the splitting logic lands.
-    # - name: Download QASMBench
-    #   run: |
-    #     cd benchmarking
-    #     git clone https://github.com/pnnl/QASMBench.git
-    # - name: Run benchmark
-    #   run: |
-    #     cd benchmarking
-    #     cp benchmarks_output.txt benchmarks_output.bak
-    #     chmod +x ./run_benchmarks.sh
-    #     ./run_benchmarks.sh
-    #     diff benchmarks_output.bak benchmarks_output.txt
+    - name: Download QASMBench
+      if: matrix.python-version == '3.12'
+      run: |
+        cd benchmarking
+        git clone --depth 1 https://github.com/dlyongemallo/QASMBench.git
+        cd QASMBench
+        git fetch --depth 1 origin cc918eae6dbdb9dab30cd0129dba93572505bf62
+        git checkout cc918eae6dbdb9dab30cd0129dba93572505bf62
+    - name: Run benchmark
+      if: matrix.python-version == '3.12'
+      run: |
+        cd benchmarking
+        cp benchmarks_output.txt benchmarks_output.bak
+        chmod +x ./run_benchmarks.sh
+        ./run_benchmarks.sh
+        diff benchmarks_output.bak benchmarks_output.txt

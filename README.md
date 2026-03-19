@@ -49,14 +49,17 @@ zx_qc = transpile(qc, optimization_method="zxpass")
 
 ## Running benchmarks
 
-To perform some benchmarks based on the [QASMBench](https://github.com/pnnl/QASMBench) suite, run the following:
+To perform some benchmarks based on the [QASMBench](https://github.com/pnnl/QASMBench) suite
+(we use a [fork](https://github.com/dlyongemallo/QASMBench) which includes a
+fix for incorrect register names in several QASM files; see
+[pnnl/QASMBench#9](https://github.com/pnnl/QASMBench/issues/9)), run the following:
 
 ```bash
 cd benchmarking
 python run_benchmarks.py
 ```
 
-This will output some statistics and produce 2 PNG files showing the depth compression ratio between both Qiskit- and ZX-optimized circuits and the original circuits, and ratio of non-local gates beween the Qiskit- and ZX-optimized circuits.
+This will output some statistics and produce 2 PNG files showing the depth compression ratio between both Qiskit- and ZX-optimized circuits and the original circuits, and ratio of non-local gates between the Qiskit- and ZX-optimized circuits.
 
 ## Previous work
 
