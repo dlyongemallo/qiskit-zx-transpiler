@@ -430,6 +430,81 @@ def test_pyzx_issue_102() -> None:
     assert _run_zxpass(qc)
 
 
+def test_mid_circuit_measure_optimization() -> None:
+    """Test that unitary segments around mid-circuit measurements are optimised.
+
+    Each segment contains redundant CX pairs that ZX-calculus cancels, while
+    the mid-circuit measurement is preserved between the two segments.
+    """
+    q = QuantumRegister(3, "q")
+    c = ClassicalRegister(1, "c")
+    qc = QuantumCircuit(q, c)
+
+    # Segment A: CX pairs cancel, leaving one CX worth of entanglement.
+    qc.cx(q[0], q[1])
+    qc.cx(q[1], q[2])
+    qc.cx(q[1], q[2])
+    qc.cx(q[0], q[1])
+    qc.cx(q[0], q[2])
+
+    # Mid-circuit measurement (not terminal).
+    qc.measure(q[0], c[0])
+
+    # Segment B: same reducible pattern.
+    qc.cx(q[0], q[2])
+    qc.cx(q[0], q[1])
+    qc.cx(q[1], q[2])
+    qc.cx(q[1], q[2])
+    qc.cx(q[0], q[1])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+
+    assert op_names.count("measure") == 1
+    # The measurement must appear before at least one post-measurement gate.
+    measure_idx = op_names.index("measure")
+    assert measure_idx < len(op_names) - 1, "measure should not be the last op"
+    assert result.size() < qc.size(), (
+        f"Expected optimisation: {result.size()} >= {qc.size()}"
+    )
+
+
+def test_repeated_measure_reset_pattern() -> None:
+    """Test the measure-reset-compute pattern used in QEC.
+
+    Multiple rounds of [compute, measure, reset] should each have
+    their unitary segments optimised independently.
+    """
+    q = QuantumRegister(3, "q")
+    c = ClassicalRegister(1, "c")
+    qc = QuantumCircuit(q, c)
+
+    for _ in range(3):
+        # Compute: CX pairs cancel, leaving one CX worth of entanglement.
+        qc.cx(q[0], q[1])
+        qc.cx(q[1], q[2])
+        qc.cx(q[1], q[2])
+        qc.cx(q[0], q[1])
+        qc.cx(q[0], q[2])
+        # Measure and reset.
+        qc.measure(q[0], c[0])
+        qc.reset(q[0])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+
+    assert op_names.count("measure") == 3
+    assert op_names.count("reset") == 3
+    assert result.size() < qc.size(), (
+        f"Expected optimisation in repeated measure-reset pattern: "
+        f"{result.size()} >= {qc.size()}"
+    )
+
+
 def test_random_circuits() -> None:
     """Test random circuits."""
     for _ in range(20):
