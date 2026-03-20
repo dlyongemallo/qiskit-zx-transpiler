@@ -371,12 +371,12 @@ class ZXPass(TransformationPass):
                 for attr in ["ctrl1", "ctrl2", "control", "target"]:
                     if hasattr(gate, attr):
                         qargs.append(original_dag.qubits[getattr(gate, attr)])
+                _, gate_type, _, num_params, *_ = qiskit_gate_table[gate_name]
                 params: List[float] = []
-                if hasattr(gate, "phase"):
+                if num_params > 0 and hasattr(gate, "phase"):
                     params = [float(gate.phase) * np.pi]
-                elif hasattr(gate, "phases"):
+                elif num_params > 0 and hasattr(gate, "phases"):
                     params = [float(phase) * np.pi for phase in gate.phases]
-                _, gate_type, _, _, *_ = qiskit_gate_table[gate_name]
                 dag.apply_operation_back(gate_type(*params), tuple(qargs))
 
         return dag
