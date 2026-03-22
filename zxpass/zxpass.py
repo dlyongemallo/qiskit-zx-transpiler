@@ -21,7 +21,15 @@ import numpy as np
 
 from qiskit.transpiler.basepasses import TransformationPass
 from qiskit.dagcircuit import DAGCircuit, DAGOpNode
-from qiskit.circuit import Qubit, Instruction, Measure, Reset, ClassicalRegister
+from qiskit.circuit import (
+    Qubit,
+    Instruction,
+    Measure,
+    Reset,
+    ClassicalRegister,
+    IfElseOp,
+    QuantumCircuit,
+)
 
 from qiskit.circuit.library import XGate, YGate, ZGate, HGate, SGate, TGate, SXGate
 from qiskit.circuit.library import SdgGate, TdgGate, SXdgGate
@@ -174,28 +182,39 @@ class ZXPass(TransformationPass):
         node: DAGOpNode,
         qubit_to_index: Dict[Qubit, int],
     ) -> Optional[ConditionalGate]:
-        """Try to convert a conditional DAGOpNode to a PyZX ConditionalGate.
+        """Try to convert an IfElseOp DAGOpNode to a PyZX ConditionalGate.
 
-        Returns ``None`` if the gate is not a supported conditional conversion
-        (e.g. unsupported gate type, Clbit condition, or multi-qubit gate).
+        Returns ``None`` if the operation is not a supported conditional conversion
+        (e.g. unsupported gate type, Clbit condition, multi-qubit gate, or
+        multi-gate body).
         """
         gate = node.op
         cond_reg, cond_val = gate.condition
         if not isinstance(cond_reg, ClassicalRegister):
             return None
-        if gate.name not in _conditional_inner_gates or gate.name not in qiskit_gate_table:
+        # Reject if there is a non-empty else block; converting would silently
+        # drop the else branch and change program semantics.
+        if len(gate.blocks) > 1 and len(gate.blocks[1].data) > 0:
+            return None
+        body = gate.blocks[0]
+        if len(body.data) != 1:
+            return None
+        inner_inst = body.data[0]
+        inner_name = inner_inst.operation.name
+        if inner_name not in _conditional_inner_gates or inner_name not in qiskit_gate_table:
             return None
         if len(node.qargs) != 1:
             return None
-        gate_type, _, _, num_params, *adjoint = qiskit_gate_table[gate.name]  # type: ignore
-        if len(node.op.params) != num_params:
+        gate_type, _, _, num_params, *adjoint = qiskit_gate_table[inner_name]  # type: ignore
+        inner_params = inner_inst.operation.params
+        if len(inner_params) != num_params:
             raise ValueError(
                 f"Expected {num_params} parameters for conditional gate "
-                f"{gate.name}, got {len(node.op.params)}: {node.op.params}."
+                f"{inner_name}, got {len(inner_params)}: {inner_params}."
             )
         inner_gate = gate_type(  # type: ignore[call-arg]
             qubit_to_index[node.qargs[0]],
-            *[Fraction(param / np.pi) for param in node.op.params],
+            *[Fraction(param / np.pi) for param in inner_params],
             **{"adjoint": adjoint[0]} if adjoint else {},
         )
         return ConditionalGate(
@@ -230,7 +249,7 @@ class ZXPass(TransformationPass):
         for node in dag.topological_op_nodes():
             gate = node.op
 
-            if gate.name == "measure" and gate.condition is None:
+            if gate.name == "measure":
                 _ensure_circuit().add_gate(
                     PyzxMeasurement(
                         qubit_to_index[node.qargs[0]],
@@ -239,21 +258,27 @@ class ZXPass(TransformationPass):
                 )
                 continue
 
-            if gate.name == "reset" and gate.condition is None:
+            if gate.name == "reset":
                 _ensure_circuit().add_gate(
                     PyzxReset(qubit_to_index[node.qargs[0]])
                 )
                 continue
 
-            # Handle conditional gates: convert supported single-qubit Z/X
-            # rotations to PyZX ConditionalGate; otherwise store as DAGOpNode.
-            if gate.condition is not None:
+            # Handle conditional gates (IfElseOp): convert supported
+            # single-qubit Z/X rotations to PyZX ConditionalGate; otherwise
+            # store as DAGOpNode.
+            if isinstance(gate, IfElseOp):
                 converted = self._try_convert_conditional(node, qubit_to_index)
                 if converted is not None:
                     _ensure_circuit().add_gate(converted)
                     continue
+                if current_circuit is not None:
+                    circuits_and_nodes.append(current_circuit)
+                    current_circuit = None
+                circuits_and_nodes.append(node)
+                continue
 
-            if gate.name not in qiskit_gate_table or gate.condition is not None:
+            if gate.name not in qiskit_gate_table:
                 # Encountered an operation not supported by PyZX (or an unsupported
                 # conditional gate), so just store the DAGOpNode.
                 # Flush the current PyZX Circuit first if there is one.
@@ -316,12 +341,14 @@ class ZXPass(TransformationPass):
             params = [float(inner.phase) * np.pi]
         _, inner_gate_type, _, _, *_ = qiskit_gate_table[inner_name]
         qiskit_gate = inner_gate_type(*params)
-        # Find the classical register by name.
+        # Build a body circuit for the IfElseOp.
+        body = QuantumCircuit(1)
+        body.append(qiskit_gate, [0])
         creg = original_dag.cregs[gate.condition_register]
-        qiskit_gate = qiskit_gate.c_if(creg, gate.condition_value)
-        dag.apply_operation_back(qiskit_gate, (qubit,))
+        if_op = IfElseOp((creg, gate.condition_value), body)
+        dag.apply_operation_back(if_op, (qubit,), tuple(creg))
 
-    def _recover_dag(
+    def _recover_dag(  # pylint: disable=too-many-locals,too-many-branches
         self,
         circuits_and_nodes: List[Union[zx.Circuit, DAGOpNode]],
         original_dag: DAGCircuit,
@@ -334,10 +361,19 @@ class ZXPass(TransformationPass):
         """
 
         dag = DAGCircuit()
-        dag.cregs = original_dag.cregs
-        dag.add_clbits(original_dag.clbits)
-        dag.qregs = original_dag.qregs
-        dag.add_qubits(original_dag.qubits)
+        for qreg in original_dag.qregs.values():
+            dag.add_qreg(qreg)
+        for creg in original_dag.cregs.values():
+            dag.add_creg(creg)
+        # Add any loose bits not owned by a register.
+        registered_qubits = {q for qreg in dag.qregs.values() for q in qreg}
+        for qubit in original_dag.qubits:
+            if qubit not in registered_qubits:
+                dag.add_qubits([qubit])
+        registered_clbits = {b for creg in dag.cregs.values() for b in creg}
+        for clbit in original_dag.clbits:
+            if clbit not in registered_clbits:
+                dag.add_clbits([clbit])
         for circuit_or_node in circuits_and_nodes:
             if isinstance(circuit_or_node, DAGOpNode):
                 dag.apply_operation_back(
