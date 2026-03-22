@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "qiskit-zx-transpiler"
 version = "0.0.1"
 description = "A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "Apache 2.0"}
 readme = "README.md"
 authors = [
@@ -28,11 +28,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 
