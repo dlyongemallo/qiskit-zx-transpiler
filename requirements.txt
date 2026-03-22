@@ -3,4 +3,4 @@ matplotlib>=3.7.4
 numpy>=1.24.0
 pylatexenc~=2.10
 pytest>=8.1.1
-qiskit~=1.1.0
+qiskit>=2.3

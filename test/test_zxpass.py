@@ -21,7 +21,7 @@ from pyzx.circuit.gates import Measurement as PyzxMeasurement, Reset as PyzxRese
 from pyzx.circuit.gates import ConditionalGate
 import numpy as np
 
-from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister, IfElseOp
 from qiskit.circuit import Measure, Reset
 from qiskit.dagcircuit import DAGOpNode
 from qiskit.quantum_info import Statevector
@@ -196,7 +196,8 @@ def test_conditional_round_trip() -> None:
     qc = QuantumCircuit(q, c)
     qc.h(q[0])
     qc.measure(q[0], c[0])
-    qc.z(q[0]).c_if(c, 1)
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.z(q[0])
     qc.h(q[0])
 
     zxpass = ZXPass()
@@ -208,11 +209,11 @@ def test_conditional_round_trip() -> None:
         for node in qiskit.converters.circuit_to_dag(result).topological_op_nodes()
     ]
     assert "measure" in op_names
-    # The conditional Z should be present (possibly as z with a condition).
+    # The conditional Z should be present as an IfElseOp.
     cond_ops = [
         node
         for node in qiskit.converters.circuit_to_dag(result).topological_op_nodes()
-        if node.op.condition is not None
+        if isinstance(node.op, IfElseOp)
     ]
     assert len(cond_ops) == 1
 
@@ -223,7 +224,8 @@ def test_conditional_z_gate() -> None:
     c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
     qc.measure(q[0], c[0])
-    qc.z(q[0]).c_if(c, 1)
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.z(q[0])
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
@@ -241,10 +243,10 @@ def test_conditional_z_gate() -> None:
     # Round-trip: convert back to DAG and verify the conditional gate is preserved.
     identity = ZXPass(optimize=lambda circ: circ)
     result_dag = identity.run(dag)
-    cond_ops = [n for n in result_dag.topological_op_nodes() if n.op.condition is not None]
+    cond_ops = [n for n in result_dag.topological_op_nodes() if isinstance(n.op, IfElseOp)]
     assert len(cond_ops) == 1
-    assert cond_ops[0].op.name == "z"
     assert cond_ops[0].op.condition == (c, 1)
+    assert cond_ops[0].op.blocks[0].data[0].operation.name == "z"
 
 
 def test_conditional_x_gate() -> None:
@@ -253,7 +255,8 @@ def test_conditional_x_gate() -> None:
     c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
     qc.measure(q[0], c[0])
-    qc.x(q[0]).c_if(c, 1)
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.x(q[0])
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
@@ -268,10 +271,10 @@ def test_conditional_x_gate() -> None:
     # Round-trip.
     identity = ZXPass(optimize=lambda circ: circ)
     result_dag = identity.run(dag)
-    cond_ops = [n for n in result_dag.topological_op_nodes() if n.op.condition is not None]
+    cond_ops = [n for n in result_dag.topological_op_nodes() if isinstance(n.op, IfElseOp)]
     assert len(cond_ops) == 1
-    assert cond_ops[0].op.name == "x"
     assert cond_ops[0].op.condition == (c, 1)
+    assert cond_ops[0].op.blocks[0].data[0].operation.name == "x"
 
 
 def test_conditional_s_gate() -> None:
@@ -280,7 +283,8 @@ def test_conditional_s_gate() -> None:
     c = ClassicalRegister(2, "c")
     qc = QuantumCircuit(q, c)
     qc.measure(q[0], c[0])
-    qc.s(q[0]).c_if(c, 2)
+    with qc.if_test((c, 2)):  # pylint: disable=not-context-manager
+        qc.s(q[0])
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
@@ -297,10 +301,10 @@ def test_conditional_s_gate() -> None:
     # Round-trip.
     identity = ZXPass(optimize=lambda circ: circ)
     result_dag = identity.run(dag)
-    cond_ops = [n for n in result_dag.topological_op_nodes() if n.op.condition is not None]
+    cond_ops = [n for n in result_dag.topological_op_nodes() if isinstance(n.op, IfElseOp)]
     assert len(cond_ops) == 1
-    assert cond_ops[0].op.name == "s"
     assert cond_ops[0].op.condition == (c, 2)
+    assert cond_ops[0].op.blocks[0].data[0].operation.name == "s"
 
 
 def test_conditional_unsupported_gate() -> None:
@@ -308,7 +312,8 @@ def test_conditional_unsupported_gate() -> None:
     q = QuantumRegister(1, "q")
     c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
-    qc.h(q[0]).c_if(c, 0)
+    with qc.if_test((c, 0)):  # pylint: disable=not-context-manager
+        qc.h(q[0])
 
     dag = qiskit.converters.circuit_to_dag(qc)
     zxpass = ZXPass()
@@ -325,9 +330,17 @@ def test_conditional_gate_passthrough() -> None:
     q = QuantumRegister(1, "q")
     c = ClassicalRegister(1, "c")
     qc = QuantumCircuit(q, c)
-    qc.h(q[0]).c_if(c, 0)
+    with qc.if_test((c, 0)):  # pylint: disable=not-context-manager
+        qc.h(q[0])
 
-    assert _run_zxpass(qc)
+    zxpass = ZXPass()
+    pass_manager = PassManager(zxpass)
+    result = pass_manager.run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    ops = list(dag.topological_op_nodes())
+    assert len(ops) == 1
+    assert isinstance(ops[0].op, IfElseOp)
 
 
 def test_hybrid_circuit_optimization() -> None:
@@ -349,7 +362,8 @@ def test_hybrid_circuit_optimization() -> None:
     qc.measure(q[0], c[0])
 
     # Conditional correction.
-    qc.z(q[1]).c_if(c, 1)
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.z(q[1])
 
     # Reset and segment C.
     qc.reset(q[0])
@@ -366,7 +380,7 @@ def test_hybrid_circuit_optimization() -> None:
     # Non-unitary operations should be preserved.
     assert "measure" in op_names
     assert "reset" in op_names
-    cond_ops = [node for node in dag.topological_op_nodes() if node.op.condition is not None]
+    cond_ops = [node for node in dag.topological_op_nodes() if isinstance(node.op, IfElseOp)]
     assert len(cond_ops) == 1
 
     # The H-H pairs in segments A and C should have been optimised away.

@@ -1,6 +1,6 @@
 Circuit name: wstate_n3
-Size - original: 9, optimized: 22 (0.41), zx: 49 (0.18)
-Depth - original: 6, optimized: 14 (0.43), zx: 35 (0.17)
+Size - original: 9, optimized: 21 (0.43), zx: 49 (0.18)
+Depth - original: 6, optimized: 13 (0.46), zx: 35 (0.17)
 Number of non-local gates - original: 3, optimized: 6, zx: 14, ratio: 0.43
 
 Circuit name: linearsolver_n3
@@ -79,7 +79,7 @@ Depth - original: 5, optimized: 5 (1.00), zx: 5 (1.00)
 Number of non-local gates - original: 2, optimized: 2, zx: 2, ratio: 1.00
 
 Circuit name: vqe_uccsd_n4
-Size - original: 224, optimized: 148 (1.51), zx: 90 (2.49)
+Size - original: 224, optimized: 147 (1.52), zx: 90 (2.49)
 Depth - original: 146, optimized: 111 (1.32), zx: 66 (2.21)
 Number of non-local gates - original: 88, optimized: 71, zx: 40, ratio: 1.77
 
@@ -114,12 +114,12 @@ Depth - original: 22, optimized: 22 (1.00), zx: 77 (0.29)
 Number of non-local gates - original: 10, optimized: 10, zx: 26, ratio: 0.38
 
 Circuit name: vqe_uccsd_n6
-Size - original: 2288, optimized: 1613 (1.42), zx: 431 (5.31)
+Size - original: 2288, optimized: 1615 (1.42), zx: 431 (5.31)
 Depth - original: 1487, optimized: 1298 (1.15), zx: 299 (4.97)
-Number of non-local gates - original: 1052, optimized: 924, zx: 195, ratio: 4.74
+Number of non-local gates - original: 1052, optimized: 923, zx: 195, ratio: 4.73
 
 Circuit name: ising_n10
-Size - original: 490, optimized: 225 (2.18), zx: 454 (1.08)
+Size - original: 490, optimized: 220 (2.23), zx: 454 (1.08)
 Depth - original: 71, optimized: 42 (1.69), zx: 124 (0.57)
 Number of non-local gates - original: 90, optimized: 90, zx: 150, ratio: 0.60
 
@@ -144,9 +144,9 @@ Depth - original: 7, optimized: 4 (1.75), zx: 8 (0.88)
 Number of non-local gates - original: 0, optimized: 0, zx: 0
 
 Circuit name: vqe_uccsd_n8
-Size - original: 10816, optimized: 7785 (1.39), zx: 1586 (6.82)
+Size - original: 10816, optimized: 7771 (1.39), zx: 1586 (6.82)
 Depth - original: 7253, optimized: 6424 (1.13), zx: 1128 (6.43)
-Number of non-local gates - original: 5488, optimized: 4808, zx: 737, ratio: 6.52
+Number of non-local gates - original: 5488, optimized: 4815, zx: 737, ratio: 6.53
 
 Circuit name: adder_n10
 Size - original: 19, optimized: 139 (0.14), zx: 31 (0.61)
