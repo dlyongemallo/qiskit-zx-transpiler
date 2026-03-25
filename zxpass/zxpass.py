@@ -15,7 +15,7 @@
 
 """A transpiler pass for Qiskit which uses ZX-Calculus for circuit optimization, implemented using PyZX."""
 
-from typing import Dict, List, Tuple, Callable, Optional, Type, Union
+from typing import Any, Dict, List, Tuple, Callable, Optional, Type, Union
 from fractions import Fraction
 import numpy as np
 
@@ -119,6 +119,62 @@ _conditional_inner_gates = {
 def _is_unitary_gate(gate: Gate) -> bool:
     """Check whether a PyZX gate is a unitary gate (not measurement, reset, or conditional)."""
     return not isinstance(gate, (PyzxMeasurement, PyzxReset, ConditionalGate))
+
+
+def compute_output_permutation(g: Any) -> Dict[int, int]:
+    """Compute the output-to-input qubit permutation from a post-extraction graph.
+
+    After ``extract_circuit(g, up_to_perm=True)`` the graph *g* is mutated so
+    that only boundary vertices (inputs and outputs) remain.  Each output vertex
+    is connected to exactly one input vertex.  This function reads that mapping
+    and returns a dict ``{output_qubit_index: input_qubit_index}``.
+
+    Qubit indices are those reported by ``g.qubit(v)`` for each boundary
+    vertex, matching the qubit numbering that pyzx uses elsewhere (e.g. the
+    ``target``/``control`` fields of extracted gates).
+
+    Raises ``ValueError`` if the extracted connectivity does not describe a
+    bijection (e.g. mismatched input/output counts, outputs with more than one
+    neighbour, outputs connected to non-input vertices, or two outputs sharing
+    an input).
+
+    Only uses public pyzx graph API (``g.inputs()``, ``g.outputs()``,
+    ``g.neighbors()``, ``g.qubit()``).
+    """
+    inputs = list(g.inputs())
+    outputs = list(g.outputs())
+    if len(inputs) != len(outputs):
+        raise ValueError(
+            f"Expected equal numbers of inputs and outputs, "
+            f"got {len(inputs)} inputs and {len(outputs)} outputs."
+        )
+    input_qubit_of_vertex = {v: g.qubit(v) for v in inputs}
+    perm: Dict[int, int] = {}
+    for out_v in outputs:
+        neighbors = list(g.neighbors(out_v))
+        if len(neighbors) != 1:
+            raise ValueError(
+                f"Expected output vertex {out_v} to have exactly one "
+                f"neighbour after extraction, got {len(neighbors)}."
+            )
+        in_v = neighbors[0]
+        if in_v not in input_qubit_of_vertex:
+            raise ValueError(
+                f"Output vertex {out_v} is connected to vertex {in_v} "
+                f"which is not an input vertex."
+            )
+        out_q = g.qubit(out_v)
+        if out_q in perm:
+            raise ValueError(
+                f"Multiple output vertices share qubit index {out_q}."
+            )
+        perm[out_q] = input_qubit_of_vertex[in_v]
+    if len(set(perm.values())) != len(perm):
+        raise ValueError(
+            "Output-to-input mapping is not bijective; "
+            "multiple outputs map to the same input."
+        )
+    return perm
 
 
 def _optimize_unitary(c: zx.Circuit) -> zx.Circuit:
