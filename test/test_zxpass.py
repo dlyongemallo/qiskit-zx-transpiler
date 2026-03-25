@@ -526,3 +526,176 @@ def test_random_circuits() -> None:
         depth = np.random.randint(10, 21)
         qc = random_circuit(num_qubits, depth)
         assert _run_zxpass(qc)
+
+
+def test_benchmark_teleportation() -> None:
+    """Benchmark: quantum teleportation circuit with mid-circuit measurement.
+
+    Teleportation uses a Bell pair, mid-circuit measurements, and conditional
+    corrections. Verifies the full hybrid pipeline handles this pattern.
+    """
+    q = QuantumRegister(3, "q")
+    c = ClassicalRegister(2, "c")
+    qc = QuantumCircuit(q, c)
+
+    # Prepare state to teleport.
+    qc.rx(0.7, q[0])
+
+    # Create Bell pair between q[1] and q[2].
+    qc.h(q[1])
+    qc.cx(q[1], q[2])
+
+    # Bell measurement on q[0], q[1].
+    qc.cx(q[0], q[1])
+    qc.h(q[0])
+    qc.measure(q[0], c[0])
+    qc.measure(q[1], c[1])
+
+    # Conditional corrections on q[2].
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.x(q[2])
+    with qc.if_test((c, 2)):  # pylint: disable=not-context-manager
+        qc.z(q[2])
+    with qc.if_test((c, 3)):  # pylint: disable=not-context-manager
+        qc.x(q[2])
+        qc.z(q[2])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+    assert op_names.count("measure") == 2
+    cond_ops = [node for node in dag.topological_op_nodes() if isinstance(node.op, IfElseOp)]
+    assert len(cond_ops) == 3
+
+
+def test_benchmark_qec_syndrome_extraction() -> None:
+    """Benchmark: QEC-like syndrome extraction with mid-circuit measurement.
+
+    A simplified 3-qubit bit-flip code: data qubits are entangled with
+    ancilla qubits, ancillae are measured mid-circuit, and corrections
+    are applied conditionally.  Multiple rounds exercise the repeated
+    measure-reset-compute pattern.
+    """
+    data = QuantumRegister(3, "data")
+    ancilla = QuantumRegister(2, "anc")
+    syn = ClassicalRegister(2, "syn")
+    qc = QuantumCircuit(data, ancilla, syn)
+
+    for _ in range(2):
+        # Syndrome extraction: CNOT from data to ancilla.
+        qc.cx(data[0], ancilla[0])
+        qc.cx(data[1], ancilla[0])
+        qc.cx(data[1], ancilla[1])
+        qc.cx(data[2], ancilla[1])
+
+        # Measure ancillae.
+        qc.measure(ancilla[0], syn[0])
+        qc.measure(ancilla[1], syn[1])
+
+        # Conditional correction based on syndrome.
+        with qc.if_test((syn, 1)):  # pylint: disable=not-context-manager
+            qc.x(data[0])
+
+        # Reset ancillae for next round.
+        qc.reset(ancilla[0])
+        qc.reset(ancilla[1])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+    assert op_names.count("measure") == 4
+    assert op_names.count("reset") == 4
+
+
+def test_benchmark_repeated_conditional_corrections() -> None:
+    """Benchmark: repeated measure-correct-compute cycles.
+
+    Each cycle measures a qubit, applies a conditional correction, resets,
+    and continues with unitary computation that has redundant gates for
+    ZX-calculus to simplify.
+    """
+    q = QuantumRegister(3, "q")
+    c = ClassicalRegister(1, "c")
+    qc = QuantumCircuit(q, c)
+
+    for _ in range(3):
+        # Unitary segment with redundant CX pairs.
+        qc.cx(q[0], q[1])
+        qc.cx(q[1], q[2])
+        qc.cx(q[1], q[2])
+        qc.cx(q[0], q[1])
+        qc.cx(q[0], q[2])
+
+        # Mid-circuit measurement.
+        qc.measure(q[0], c[0])
+
+        # Conditional correction.
+        with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+            qc.z(q[1])
+
+        # Reset and continue.
+        qc.reset(q[0])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+    assert op_names.count("measure") == 3
+    assert op_names.count("reset") == 3
+    cond_ops = [node for node in dag.topological_op_nodes() if isinstance(node.op, IfElseOp)]
+    assert len(cond_ops) == 3
+    # The redundant CX pairs in each unitary segment should be optimised.
+    assert result.size() < qc.size(), (
+        f"Expected optimisation in repeated cycles: {result.size()} >= {qc.size()}"
+    )
+
+
+def test_benchmark_multi_qubit_mid_circuit_measure() -> None:
+    """Benchmark: multi-qubit circuit with measurements on different qubits.
+
+    Tests that the hybrid splitter correctly handles measurements on
+    different qubits within the same circuit, with unitary computation
+    interleaved between measurements.
+    """
+    q = QuantumRegister(4, "q")
+    c = ClassicalRegister(2, "c")
+    qc = QuantumCircuit(q, c)
+
+    # Entangle all qubits.
+    qc.h(q[0])
+    qc.cx(q[0], q[1])
+    qc.cx(q[1], q[2])
+    qc.cx(q[2], q[3])
+
+    # Measure qubit 0.
+    qc.measure(q[0], c[0])
+
+    # More unitary computation on remaining qubits.
+    qc.h(q[1])
+    qc.cx(q[1], q[2])
+    qc.cx(q[2], q[3])
+    qc.h(q[3])
+
+    # Measure qubit 1.
+    qc.measure(q[1], c[1])
+
+    # Conditional correction and final unitary.
+    with qc.if_test((c, 1)):  # pylint: disable=not-context-manager
+        qc.z(q[2])
+
+    qc.h(q[2])
+    qc.cx(q[2], q[3])
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+    assert op_names.count("measure") == 2
+    cond_ops = [node for node in dag.topological_op_nodes() if isinstance(node.op, IfElseOp)]
+    assert len(cond_ops) == 1
