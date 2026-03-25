@@ -526,6 +526,79 @@ def test_repeated_measure_reset_pattern() -> None:
     )
 
 
+def test_post_extraction_cleanup() -> None:
+    """Test that ``_optimize_unitary`` applies ``basic_optimization`` after extraction.
+
+    Extraction produces CZ + HAD form with redundant single-qubit gates;
+    ``basic_optimization`` cancels those and folds HAD-CZ-HAD into CNOT.
+    Compares against naive extraction to verify the post-pass actually ran:
+    if the ``basic_optimization`` step were removed, ``_optimize_unitary``
+    would return a circuit no smaller than ``extract_circuit`` alone and
+    this assertion would fail.
+    """
+    # pylint: disable=import-outside-toplevel
+    from fractions import Fraction
+    from zxpass.zxpass import _optimize_unitary
+
+    # Build a circuit whose extraction leaves enough single-qubit redundancy
+    # for basic_optimization to produce a measurable reduction, while being
+    # small enough that the gate-count fallback does not trigger.
+    c = zx.Circuit(4)
+    for j in range(4):
+        c.add_gate("HAD", j)
+    for _ in range(3):
+        for i in range(3):
+            c.add_gate("CNOT", i, i + 1)
+        for j in range(4):
+            c.add_gate("ZPhase", j, phase=Fraction(1, 2 + j))
+        for i in range(3):
+            c.add_gate("CNOT", i, i + 1)
+
+    optimized = _optimize_unitary(c)
+
+    # Size of the extraction output without the post-pass, i.e., what
+    # ``_optimize_unitary`` would have produced if the ``basic_optimization``
+    # call were removed.
+    g = c.to_graph()
+    zx.simplify.full_reduce(g)
+    extraction_only = zx.extract.extract_circuit(g)
+
+    assert len(optimized.gates) < len(extraction_only.gates), (
+        f"Expected _optimize_unitary to yield fewer gates than extract_circuit alone; "
+        f"got {len(optimized.gates)} vs {len(extraction_only.gates)}"
+    )
+
+
+def test_post_extraction_cleanup_equivalence() -> None:
+    """Test that the post-extraction cleanup preserves circuit equivalence.
+
+    Runs multiple circuits through the full ZXPass pipeline and verifies
+    statevector equivalence after the basic_optimization post-pass.
+    """
+    circuits = []
+
+    # Bell state preparation with extra gates.
+    qc1 = QuantumCircuit(3)
+    qc1.h(0)
+    qc1.cx(0, 1)
+    qc1.cx(1, 2)
+    qc1.h(2)
+    qc1.cx(2, 0)
+    circuits.append(qc1)
+
+    # Multi-CX circuit.
+    qc2 = QuantumCircuit(4)
+    for i in range(3):
+        qc2.cx(i, i + 1)
+    qc2.h(0)
+    qc2.cx(3, 0)
+    qc2.h(1)
+    circuits.append(qc2)
+
+    for qc in circuits:
+        assert _run_zxpass(qc), f"Equivalence failed for circuit:\n{qc}"
+
+
 def test_gate_count_fallback_toffoli() -> None:
     """Test that the gate-count fallback prevents regression on a Toffoli circuit.
 

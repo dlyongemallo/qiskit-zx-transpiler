@@ -57,6 +57,7 @@ from qiskit.circuit.library import (
 from qiskit.circuit.library import CSwapGate, CCXGate, CCZGate
 
 import pyzx as zx
+from pyzx.optimize import basic_optimization
 from pyzx.circuit.gates import Gate
 from pyzx.circuit.gates import NOT, Y, Z, S, T, HAD, SX
 from pyzx.circuit.gates import XPhase, YPhase, ZPhase, U2, U3
@@ -123,16 +124,18 @@ def _is_unitary_gate(gate: Gate) -> bool:
 def _optimize_unitary(c: zx.Circuit) -> zx.Circuit:
     """Optimise a purely unitary PyZX circuit using full_reduce and extraction.
 
-    If extraction produces at least as many gates as the original circuit, the
-    original is returned unchanged to avoid regressions on small circuits with
-    compact multi-qubit gates (e.g. Toffoli, Fredkin). The comparison counts
-    PyZX gate objects directly; since ``_recover_dag`` emits one Qiskit op per
-    PyZX gate, this matches the Qiskit-side ``size()`` that downstream passes
-    see.
+    After extraction, ``basic_optimization`` converts HAD-CZ-HAD sequences to
+    CNOTs and cancels redundant single-qubit gates.  If the result still has at
+    least as many gates as the original circuit, the original is returned
+    unchanged to avoid regressions on small circuits with compact multi-qubit
+    gates (e.g. Toffoli, Fredkin). The comparison counts PyZX gate objects
+    directly; since ``_recover_dag`` emits one Qiskit op per PyZX gate, this
+    matches the Qiskit-side ``size()`` that downstream passes see.
     """
     g = c.to_graph()
     zx.simplify.full_reduce(g)
     optimized = zx.extract.extract_circuit(g)
+    optimized = basic_optimization(optimized.to_basic_gates(), do_swaps=False)
     # TODO: Consider a two-axis comparison keyed primarily on 2-qubit gate
     # count (``twoqubitcount()``), with total gate count as a tiebreaker. The
     # 2-qubit count is the dominant hardware cost and is naturally apples-to-

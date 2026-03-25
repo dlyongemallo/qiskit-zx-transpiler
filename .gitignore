@@ -16,6 +16,3 @@ __pycache__/
 build/
 dist/
 *.egg-info/
-
-# Submodules
-benchmarking/QASMBench
