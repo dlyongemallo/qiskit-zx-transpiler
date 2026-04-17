@@ -91,6 +91,19 @@ def _save_plot(
 
 
 def run_benchmarks() -> None:
+    print("Legend:")
+    print("  Raw counts (size, depth, non-local gates): lower is better.")
+    print(
+        "  Parenthetical ratio is original/count: higher is better "
+        "(> 1.00 means smaller than original)."
+    )
+    print(
+        "  Non-local 'ratio' field is optimized/zx: higher means ZX produced "
+        "fewer non-local gates than Qiskit; omitted when the original circuit "
+        "has 0 non-local gates."
+    )
+    print()
+
     # List of circuits to benchmark, based on: https://github.com/Qiskit/qiskit/issues/4990#issuecomment-1157858632
     small_benchmarks = [
         "wstate_n3",
