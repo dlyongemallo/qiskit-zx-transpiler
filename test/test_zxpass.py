@@ -42,6 +42,13 @@ def _run_zxpass(
     return Statevector.from_instruction(qc).equiv(Statevector.from_instruction(zx_qc))
 
 
+def _assert_equiv(original: QuantumCircuit, optimized: QuantumCircuit) -> None:
+    """Assert that two circuits have the same statevector."""
+    assert Statevector.from_instruction(original).equiv(
+        Statevector.from_instruction(optimized)
+    )
+
+
 def test_basic_circuit() -> None:
     """Test a basic circuit.
 
@@ -516,6 +523,122 @@ def test_repeated_measure_reset_pattern() -> None:
     assert result.size() < qc.size(), (
         f"Expected optimisation in repeated measure-reset pattern: "
         f"{result.size()} >= {qc.size()}"
+    )
+
+
+def test_gate_count_fallback_toffoli() -> None:
+    """Test that the gate-count fallback prevents regression on a Toffoli circuit.
+
+    A Toffoli decomposed into a basic gate basis expands to many basic gates;
+    running full_reduce + extract_circuit produces even more. The fallback
+    should return a circuit no larger than the decomposed original.
+    """
+    qc = QuantumCircuit(3)
+    qc.ccx(0, 1, 2)
+    qc = qc.decompose()
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    assert result.size() <= qc.size(), (
+        f"Gate-count fallback failed: {result.size()} > {qc.size()}"
+    )
+    _assert_equiv(qc, result)
+
+
+def test_gate_count_fallback_fredkin() -> None:
+    """Test that the gate-count fallback prevents regression on a Fredkin circuit."""
+    qc = QuantumCircuit(3)
+    qc.cswap(0, 1, 2)
+    qc = qc.decompose()
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    assert result.size() <= qc.size(), (
+        f"Gate-count fallback failed: {result.size()} > {qc.size()}"
+    )
+    _assert_equiv(qc, result)
+
+
+def test_gate_count_fallback_toffoli_compact() -> None:
+    """Test the fallback preserves a compact Toffoli (single CCX instruction).
+
+    A lone ``ccx`` is a single PyZX ``Tofolli`` gate; ``extract_circuit``
+    would expand it into many basic gates, so the fallback should keep the
+    original compact form.
+    """
+    qc = QuantumCircuit(3)
+    qc.ccx(0, 1, 2)
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    assert result.size() <= qc.size(), (
+        f"Gate-count fallback failed: {result.size()} > {qc.size()}"
+    )
+    _assert_equiv(qc, result)
+
+
+def test_gate_count_fallback_fredkin_compact() -> None:
+    """Test the fallback preserves a compact Fredkin (single CSWAP instruction)."""
+    qc = QuantumCircuit(3)
+    qc.cswap(0, 1, 2)
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    assert result.size() <= qc.size(), (
+        f"Gate-count fallback failed: {result.size()} > {qc.size()}"
+    )
+    _assert_equiv(qc, result)
+
+
+def test_gate_count_fallback_still_optimizes() -> None:
+    """Test that the fallback does not prevent genuine optimisation.
+
+    Redundant CX pairs cancel under ZX-calculus; the extracted circuit
+    should be strictly smaller than the original.
+    """
+    qc = QuantumCircuit(3)
+    qc.cx(0, 1)
+    qc.cx(0, 1)
+    qc.cx(1, 2)
+    qc.cx(1, 2)
+    qc.h(2)
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    assert result.size() < qc.size(), (
+        f"Expected optimisation: {result.size()} >= {qc.size()}"
+    )
+    _assert_equiv(qc, result)
+
+
+def test_gate_count_fallback_hybrid_segments() -> None:
+    """Test the gate-count fallback applies per-segment in hybrid circuits.
+
+    Segment A (a decomposed Toffoli) should trigger the fallback while the
+    measurement and subsequent gates are preserved.
+    """
+    q = QuantumRegister(3, "q")
+    c = ClassicalRegister(1, "c")
+    qc = QuantumCircuit(q, c)
+    qc.ccx(q[0], q[1], q[2])
+    qc.measure(q[0], c[0])
+    qc.h(q[1])
+    qc = qc.decompose()
+
+    zxpass = ZXPass()
+    result = PassManager(zxpass).run(qc)
+
+    dag = qiskit.converters.circuit_to_dag(result)
+    op_names = [node.op.name for node in dag.topological_op_nodes()]
+    assert "measure" in op_names
+    assert result.size() <= qc.size(), (
+        f"Gate-count fallback failed in hybrid circuit: "
+        f"{result.size()} > {qc.size()}"
     )
 
 

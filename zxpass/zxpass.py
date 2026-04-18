@@ -121,10 +121,28 @@ def _is_unitary_gate(gate: Gate) -> bool:
 
 
 def _optimize_unitary(c: zx.Circuit) -> zx.Circuit:
-    """Optimise a purely unitary PyZX circuit using full_reduce and extraction."""
+    """Optimise a purely unitary PyZX circuit using full_reduce and extraction.
+
+    If extraction produces at least as many gates as the original circuit, the
+    original is returned unchanged to avoid regressions on small circuits with
+    compact multi-qubit gates (e.g. Toffoli, Fredkin). The comparison counts
+    PyZX gate objects directly; since ``_recover_dag`` emits one Qiskit op per
+    PyZX gate, this matches the Qiskit-side ``size()`` that downstream passes
+    see.
+    """
     g = c.to_graph()
     zx.simplify.full_reduce(g)
-    return zx.extract.extract_circuit(g)
+    optimized = zx.extract.extract_circuit(g)
+    # TODO: Consider a two-axis comparison keyed primarily on 2-qubit gate
+    # count (``twoqubitcount()``), with total gate count as a tiebreaker. The
+    # 2-qubit count is the dominant hardware cost and is naturally apples-to-
+    # apples across gate bases (a Toffoli's 2-qubit count is 6 whether it is
+    # stored as a single gate object or as its 15-gate basic decomposition),
+    # but a naive drop-in replacement misses 1-qubit blow-ups and needs a
+    # tiebreaker to handle equal 2-qubit counts.
+    if len(optimized.gates) < len(c.gates):
+        return optimized
+    return c
 
 
 def _optimize(c: zx.Circuit) -> zx.Circuit:
