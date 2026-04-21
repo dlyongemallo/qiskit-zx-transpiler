@@ -177,21 +177,67 @@ def compute_output_permutation(g: Any) -> Dict[int, int]:
     return perm
 
 
+def _permutation_to_swaps(perm: Dict[int, int]) -> List[Tuple[int, int]]:
+    """Decompose a permutation into transpositions (SWAP pairs).
+
+    Uses cycle decomposition.  The returned list, applied left to right,
+    implements the forward permutation (wire *j* ends up holding the state
+    of input qubit ``perm[j]``).
+
+    Raises ``ValueError`` if ``perm`` is not a bijection on
+    ``range(len(perm))`` (i.e. if its keys or values are not exactly the
+    set of integers ``{0, 1, ..., len(perm) - 1}``).
+    """
+    n = len(perm)
+    expected = set(range(n))
+    if set(perm.keys()) != expected:
+        raise ValueError(
+            f"Expected permutation keys to be range({n}), "
+            f"got {sorted(perm.keys())}."
+        )
+    if set(perm.values()) != expected:
+        raise ValueError(
+            f"Expected permutation values to be a permutation of range({n}), "
+            f"got {sorted(perm.values())}."
+        )
+    current = [perm[i] for i in range(n)]
+    swaps: List[Tuple[int, int]] = []
+    for i in range(n):
+        while current[i] != i:
+            j = current[i]
+            swaps.append((i, j))
+            current[i], current[j] = current[j], current[i]
+    swaps.reverse()
+    return swaps
+
+
 def _optimize_unitary(c: zx.Circuit) -> zx.Circuit:
     """Optimise a purely unitary PyZX circuit using full_reduce and extraction.
 
-    After extraction, ``basic_optimization`` converts HAD-CZ-HAD sequences to
-    CNOTs and cancels redundant single-qubit gates.  If the result still has at
-    least as many gates as the original circuit, the original is returned
-    unchanged to avoid regressions on small circuits with compact multi-qubit
-    gates (e.g. Toffoli, Fredkin). The comparison counts PyZX gate objects
-    directly; since ``_recover_dag`` emits one Qiskit op per PyZX gate, this
-    matches the Qiskit-side ``size()`` that downstream passes see.
+    Extracts with ``up_to_perm=True`` so that ``basic_optimization`` runs on a
+    circuit free of SWAP-decomposition clutter.  The output permutation is then
+    prepended as SWAP gates (each counting as one gate rather than three CNOTs),
+    giving a fairer gate-count comparison against the original circuit.  If the
+    result still has at least as many gates as the original, the original is
+    returned unchanged to avoid regressions on small circuits with compact
+    multi-qubit gates (e.g. Toffoli, Fredkin). The comparison counts PyZX gate
+    objects directly; since ``_recover_dag`` emits one Qiskit op per PyZX gate,
+    this matches the Qiskit-side ``size()`` that downstream passes see.
     """
     g = c.to_graph()
     zx.simplify.full_reduce(g)
-    optimized = zx.extract.extract_circuit(g)
+    optimized = zx.extract.extract_circuit(g, up_to_perm=True)
+    perm = compute_output_permutation(g)
     optimized = basic_optimization(optimized.to_basic_gates(), do_swaps=False)
+    # Prepend SWAP gates for the output permutation.
+    swap_pairs = _permutation_to_swaps(perm)
+    if swap_pairs:
+        with_perm = zx.Circuit(c.qubits)
+        for i, j in swap_pairs:
+            with_perm.add_gate(SWAP(i, j))
+        for gate in optimized.gates:
+            with_perm.add_gate(gate)
+        optimized = with_perm
     # TODO: Consider a two-axis comparison keyed primarily on 2-qubit gate
     # count (``twoqubitcount()``), with total gate count as a tiebreaker. The
     # 2-qubit count is the dominant hardware cost and is naturally apples-to-

@@ -20,7 +20,7 @@
 from typing import Any, Callable, Optional
 import pyzx as zx
 from pyzx.circuit.gates import Measurement as PyzxMeasurement, Reset as PyzxReset
-from pyzx.circuit.gates import ConditionalGate
+from pyzx.circuit.gates import ConditionalGate, SWAP
 import numpy as np
 import pytest
 
@@ -694,6 +694,131 @@ def test_compute_output_permutation_non_bijective() -> None:
         compute_output_permutation(g)
 
 
+def test_permutation_swaps_in_pipeline() -> None:
+    """Test that _optimize_unitary prepends SWAP gates for the output permutation.
+
+    After extraction with up_to_perm=True, the output permutation should be
+    prepended as SWAP gate objects.  Each SWAP counts as one gate instead of
+    three CNOTs, improving the gate-count comparison.
+    """
+    # pylint: disable=import-outside-toplevel
+    from fractions import Fraction
+    from zxpass.zxpass import (
+        _optimize_unitary,
+        _permutation_to_swaps,
+        compute_output_permutation,
+    )
+
+    # Build a circuit that produces a non-trivial output permutation and is
+    # large enough that the gate-count fallback does not trigger.
+    c = zx.Circuit(4)
+    for j in range(4):
+        c.add_gate("HAD", j)
+    for _ in range(3):
+        for i in range(3):
+            c.add_gate("CNOT", i, i + 1)
+        for j in range(4):
+            c.add_gate("ZPhase", j, phase=Fraction(1, 2 + j))
+        for i in range(3):
+            c.add_gate("CNOT", i, i + 1)
+
+    # Replay the same extraction path to compute the SWAP prefix that
+    # ``_optimize_unitary`` should prepend.
+    g = c.to_graph()
+    zx.simplify.full_reduce(g)
+    zx.extract.extract_circuit(g, up_to_perm=True)
+    expected_swaps = _permutation_to_swaps(compute_output_permutation(g))
+    # Sanity-check that this circuit exercises the SWAP-prefix path, so the
+    # test does not silently degenerate into a trivial no-op assertion.
+    assert expected_swaps, (
+        "Test circuit no longer produces a non-trivial output permutation. "
+        "This is likely a PyZX extraction-heuristic change (pyzx is unpinned) "
+        "rather than a regression in _optimize_unitary. Pick a different "
+        "circuit that yields a non-identity permutation under the current "
+        "PyZX version, or pin pyzx to a version where this circuit does."
+    )
+
+    optimized = _optimize_unitary(c)
+
+    # Confirm the fallback did not trigger for this circuit; otherwise the
+    # SWAP-prefix assertions below would be vacuously skipped.
+    assert list(optimized.gates) != list(c.gates), (
+        "Test circuit unexpectedly hit the gate-count fallback. This is "
+        "likely a PyZX optimisation-heuristic change (pyzx is unpinned) "
+        "rather than a regression in _optimize_unitary. Pick a different "
+        "circuit that reliably reduces in gate count under the current "
+        "PyZX version, or pin pyzx to a version where this circuit does."
+    )
+
+    # The optimized circuit should begin with exactly the expected SWAP prefix.
+    assert len(optimized.gates) >= len(expected_swaps)
+    for k, (i, j) in enumerate(expected_swaps):
+        gate = optimized.gates[k]
+        assert isinstance(gate, SWAP), (
+            f"Expected SWAP at position {k}, got {type(gate).__name__}."
+        )
+        assert {gate.control, gate.target} == {i, j}, (
+            f"SWAP at position {k} acts on {{{gate.control}, {gate.target}}}, "
+            f"expected {{{i}, {j}}}."
+        )
+    # No SWAPs should appear after the prefix.
+    for gate in optimized.gates[len(expected_swaps):]:
+        assert not isinstance(gate, SWAP), (
+            "SWAP gates should only appear at the beginning of the circuit."
+        )
+
+
+def test_permutation_to_swaps_correctness() -> None:
+    """Test that _permutation_to_swaps produces a correct SWAP sequence."""
+    from zxpass.zxpass import _permutation_to_swaps  # pylint: disable=import-outside-toplevel
+
+    # Identity permutation: no SWAPs needed.
+    assert not _permutation_to_swaps({0: 0, 1: 1, 2: 2})
+
+    # Simple transposition.
+    swaps = _permutation_to_swaps({0: 1, 1: 0})
+    assert len(swaps) == 1
+    assert set(swaps[0]) == {0, 1}
+
+    # 3-cycle: needs 2 transpositions.
+    perm = {0: 1, 1: 2, 2: 0}
+    swaps = _permutation_to_swaps(perm)
+    # Verify the SWAPs implement the permutation.
+    state = list(range(3))
+    for i, j in swaps:
+        state[i], state[j] = state[j], state[i]
+    assert state == [perm[k] for k in range(3)]
+
+    # Larger permutation with multiple cycles.
+    perm = {0: 2, 1: 0, 2: 1, 3: 4, 4: 3}
+    swaps = _permutation_to_swaps(perm)
+    state = list(range(5))
+    for i, j in swaps:
+        state[i], state[j] = state[j], state[i]
+    assert state == [perm[k] for k in range(5)]
+
+
+def test_permutation_to_swaps_invalid_input() -> None:
+    """Test that _permutation_to_swaps rejects non-bijective input."""
+    from zxpass.zxpass import _permutation_to_swaps  # pylint: disable=import-outside-toplevel
+
+    # Non-contiguous keys (missing 1).
+    with pytest.raises(ValueError, match="keys to be range"):
+        _permutation_to_swaps({0: 0, 2: 2})
+
+    # Out-of-range keys (shifted by 1).
+    with pytest.raises(ValueError, match="keys to be range"):
+        _permutation_to_swaps({1: 1, 2: 2})
+
+    # Values outside range.
+    with pytest.raises(ValueError, match="values to be a permutation"):
+        _permutation_to_swaps({0: 5, 1: 1})
+
+    # Repeated values (not a permutation).
+    with pytest.raises(ValueError, match="values to be a permutation"):
+        _permutation_to_swaps({0: 1, 1: 1})
+
+
 def test_post_extraction_cleanup() -> None:
     """Test that ``_optimize_unitary`` applies ``basic_optimization`` after extraction.
 
@@ -738,32 +863,35 @@ def test_post_extraction_cleanup() -> None:
 
 
 def test_post_extraction_cleanup_equivalence() -> None:
-    """Test that the post-extraction cleanup preserves circuit equivalence.
-
-    Runs multiple circuits through the full ZXPass pipeline and verifies
-    statevector equivalence after the basic_optimization post-pass.
-    """
-    circuits = []
-
-    # Bell state preparation with extra gates.
+    """Test that post-extraction cleanup and permutation integration preserve equivalence."""
     qc1 = QuantumCircuit(3)
     qc1.h(0)
     qc1.cx(0, 1)
     qc1.cx(1, 2)
     qc1.h(2)
     qc1.cx(2, 0)
-    circuits.append(qc1)
 
-    # Multi-CX circuit.
-    qc2 = QuantumCircuit(4)
-    for i in range(3):
+    qc2 = QuantumCircuit(5)
+    for i in range(5):
+        qc2.h(i)
+    for i in range(4):
         qc2.cx(i, i + 1)
-    qc2.h(0)
-    qc2.cx(3, 0)
-    qc2.h(1)
-    circuits.append(qc2)
+    qc2.cx(4, 0)
+    for i in range(5):
+        qc2.rz(0.3 * (i + 1), i)
 
-    for qc in circuits:
+    qc3 = QuantumCircuit(4)
+    qc3.h(0)
+    qc3.cx(0, 1)
+    qc3.h(1)
+    qc3.cx(1, 2)
+    qc3.h(2)
+    qc3.cx(2, 3)
+    qc3.cx(3, 0)
+    qc3.cx(2, 1)
+    qc3.cx(1, 0)
+
+    for qc in [qc1, qc2, qc3]:
         assert _run_zxpass(qc), f"Equivalence failed for circuit:\n{qc}"
 
 
